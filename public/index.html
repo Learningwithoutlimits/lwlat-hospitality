@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catering Bookings | LWLAT</title>
+  <meta name="description" content="Request on-site hospitality or off-site packed lunches from the LWLAT Catering Team.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 40px;
+      align-items: start;
+      padding-top: 40px;
+    }
+    .intro { max-width: 40rem; margin-bottom: 28px; }
+    .intro h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; letter-spacing: -0.01em; }
+    .intro p { margin-top: 12px; font-size: 1.125rem; }
+
+    .step {
+      position: relative;
+      margin-top: 20px;
+      padding: 28px 28px 30px 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-m);
+    }
+    .step-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 20px; }
+    .step-no {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.05rem;
+      transform: translateY(4px);
+    }
+    .step h2 { font-size: 1.45rem; font-weight: 800; }
+    .step-intro { margin: -10px 0 18px 48px; color: var(--muted); }
+    .waiting { color: var(--muted); padding: 14px 16px; border: 2px dashed var(--line); border-radius: var(--radius-s); }
+
+    /* The first choice decides the rest of the form, so it gets large tiles. */
+    .type-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+    .type-tiles .option { flex-direction: column; gap: 4px; padding: 16px 18px 18px 50px; }
+    .type-tiles .option input { position: absolute; left: 16px; top: 18px; }
+    .type-tiles strong { font-size: 1.15rem; }
+    .type-tiles small { color: var(--muted); font-size: 0.95rem; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+    .row-2 .field { margin-top: 22px; }
+
+    .lunch-grid { display: grid; gap: 10px; margin-top: 10px; }
+    .lunch-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 7rem;
+      gap: 16px;
+      align-items: center;
+      padding: 10px 12px 10px 16px;
+      border: 2px solid var(--line);
+      border-radius: var(--radius-s);
+    }
+    .lunch-row label { font-weight: 500; }
+    .lunch-row input { margin-top: 0; text-align: right; }
+    .lunch-row:has(input:not(:placeholder-shown)) { border-color: var(--teal-deep); background: var(--teal-wash); }
+    .lunch-total { margin-top: 10px; font-weight: 700; }
+    .lunch-total.warn { color: var(--alert); }
+
+    .layout > .submit-row { grid-column: 1; }
+    .layout > .docket-wrap { grid-column: 2; grid-row: 1 / span 2; }
+    .submit-row { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+    .submit-row p { color: var(--muted); max-width: 30rem; }
+
+    /* ---------- the docket ---------- */
+    .docket-wrap { position: sticky; top: 24px; }
+    .docket {
+      position: relative;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-bottom: 0;
+      border-radius: var(--radius-m) var(--radius-m) 0 0;
+      padding: 20px 22px 18px;
+      filter: drop-shadow(0 6px 14px rgba(21, 48, 47, 0.08));
+    }
+    /* Torn ticket edge */
+    .docket::after {
+      content: "";
+      position: absolute;
+      left: -1px; right: -1px; bottom: -12px;
+      height: 12px;
+      background:
+        linear-gradient(135deg, var(--paper) 6px, transparent 0) 0 0 / 12px 12px repeat-x,
+        linear-gradient(225deg, var(--paper) 6px, transparent 0) 0 0 / 12px 12px repeat-x;
+    }
+    .docket-top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .docket-top h2 { font-size: 1.2rem; font-weight: 800; }
+    .docket-top span { color: var(--muted); font-size: 0.9rem; }
+    .docket dl { margin: 0; }
+    .docket .d-row {
+      display: grid; grid-template-columns: 6.2rem 1fr; gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px dashed var(--line-strong);
+      font-size: 0.975rem;
+    }
+    .docket dt { color: var(--muted); }
+    .docket dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+    .docket dd.empty { font-weight: 400; color: var(--muted); }
+    .docket ul { list-style: none; margin: 0; padding: 0; }
+    .docket li { display: flex; justify-content: space-between; gap: 10px; }
+    .docket li + li { margin-top: 2px; }
+    .docket .d-allergy { margin-top: 12px; }
+    .docket-note { margin-top: 26px; font-size: 0.9rem; color: var(--muted); }
+
+    /* ---------- confirmation ---------- */
+    .done {
+      max-width: 40rem;
+      padding: 32px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-top: 8px solid var(--teal);
+      border-radius: var(--radius-m);
+    }
+    .done h1 { font-size: 2rem; font-weight: 800; }
+    .done .ref {
+      margin: 20px 0;
+      padding: 14px 18px;
+      background: var(--teal-wash);
+      border-radius: var(--radius-s);
+      font-size: 1.1rem;
+    }
+    .done .ref strong { display: block; font-size: 1.6rem; letter-spacing: 0.02em; }
+    .done p + p { margin-top: 12px; }
+    .done .btn { margin-top: 24px; }
+
+    .honey { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; gap: 0; }
+      .layout > .docket-wrap { position: static; grid-column: 1; grid-row: auto; margin-top: 28px; }
+    }
+    @media (max-width: 600px) {
+      .layout { padding-top: 24px; }
+      .step { padding: 22px 16px 24px; }
+      .step-intro { margin-left: 0; }
+      .type-tiles, .row-2 { grid-template-columns: 1fr; }
+      .lunch-row { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="band">
+    <div class="wrap">
+      <a class="wordmark" href="/">
+        <!-- Add the trust logo by saving it as public/lwlat-logo.svg and removing the "hidden" attribute below. -->
+        <img src="/lwlat-logo.svg" alt="" hidden>
+        <span class="wordmark-text">Learning Without Limits<span>Academy Trust</span></span>
+      </a>
+      <span class="band-title">Catering bookings</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="layout" id="form-view">
+      <div>
+        <div class="intro">
+          <h1>Book hospitality or packed lunches</h1>
+          <p>Use this form to request food and drink for a meeting or event on site, or packed lunches for a trip. Sending the form is a request only. The Catering Team will email you to confirm your booking.</p>
+          <p class="hint" id="notice-text"></p>
+        </div>
+
+        <div class="notice notice-error" id="error-summary" tabindex="-1" role="alert" hidden>
+          <h2>Please check the form</h2>
+          <ul id="error-list"></ul>
+        </div>
+
+        <form id="booking" novalidate>
+          <div class="honey" aria-hidden="true">
+            <label for="website">Leave this empty</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
+          <!-- 1 -->
+          <section class="step" aria-labelledby="h-need">
+            <div class="step-head"><span class="step-no" aria-hidden="true">1</span><h2 id="h-need">What do you need?</h2></div>
+
+            <fieldset class="field" id="f-type">
+              <legend>Type of booking</legend>
+              <div class="type-tiles">
+                <label class="option">
+                  <input type="radio" name="type" value="hospitality">
+                  <strong>Hospitality</strong>
+                  <small>Drinks, buffets and refreshments served on site</small>
+                </label>
+                <label class="option">
+                  <input type="radio" name="type" value="packed-lunch">
+                  <strong>Packed lunches</strong>
+                  <small>Lunches to collect or have delivered for a trip or off-site event</small>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="field" id="f-site">
+              <legend>Which site is this for?</legend>
+              <div class="options inline">
+                <label class="option"><input type="radio" name="site" value="Babington"> Babington</label>
+                <label class="option"><input type="radio" name="site" value="Heatherbrook"> Heatherbrook</label>
+                <label class="option"><input type="radio" name="site" value="Lancaster"> Lancaster</label>
+                <label class="option"><input type="radio" name="site" value="South Wigston"> South Wigston</label>
+                <label class="option"><input type="radio" name="site" value="Woodstock"> Woodstock</label>
+              </div>
+            </fieldset>
+          </section>
+
+          <!-- 2 -->
+          <section class="step" aria-labelledby="h-event">
+            <div class="step-head"><span class="step-no" aria-hidden="true">2</span><h2 id="h-event">The event</h2></div>
+
+            <div class="field" id="f-eventName">
+              <label for="eventName">Event or meeting name</label>
+              <input type="text" id="eventName" name="eventName" maxlength="150">
+            </div>
+            <div class="row-2">
+              <div class="field" id="f-date">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" class="w-short" aria-describedby="date-hint">
+                <p class="hint" id="date-hint"></p>
+              </div>
+              <div class="field" id="f-time">
+                <label for="time">Delivery or service time</label>
+                <input type="time" id="time" name="time" class="w-short" step="300">
+              </div>
+            </div>
+            <div class="field" id="f-people">
+              <label for="people">Number of people</label>
+              <input type="number" id="people" name="people" class="w-num" min="1" max="2000" step="1" inputmode="numeric">
+            </div>
+          </section>
+
+          <!-- 3 -->
+          <section class="step" aria-labelledby="h-order">
+            <div class="step-head"><span class="step-no" aria-hidden="true">3</span><h2 id="h-order">Your order</h2></div>
+
+            <p class="waiting" id="order-waiting">Choose hospitality or packed lunches in step 1 to see the menu.</p>
+
+            <div id="order-hospitality" hidden>
+              <div class="field" id="f-venue">
+                <label for="venue">Room or delivery location</label>
+                <p class="hint" id="venue-hint">For example, Main Hall or the Trust Boardroom</p>
+                <input type="text" id="venue" name="venue" maxlength="150" aria-describedby="venue-hint">
+              </div>
+              <fieldset class="field" id="f-hospitalityItems">
+                <legend>What would you like?</legend>
+                <p class="hint">Choose all that apply</p>
+                <div class="options cols-2" id="hospitality-options"></div>
+              </fieldset>
+              <div class="field" id="f-hospitalityDetails">
+                <label for="hospitalityDetails">Quantities, menu requests or other details <span class="optional">(optional)</span></label>
+                <p class="hint" id="hd-hint">If you chose Other, tell us what you need here.</p>
+                <textarea id="hospitalityDetails" name="hospitalityDetails" maxlength="2000" aria-describedby="hd-hint"></textarea>
+              </div>
+            </div>
+
+            <div id="order-lunch" hidden>
+              <fieldset class="field" id="f-lunches">
+                <legend>How many of each lunch?</legend>
+                <p class="hint">Leave blank any you do not need</p>
+                <div class="lunch-grid" id="lunch-options"></div>
+                <p class="lunch-total" id="lunch-total" hidden></p>
+              </fieldset>
+              <fieldset class="field" id="f-fulfilment">
+                <legend>Collection or delivery?</legend>
+                <div class="options inline">
+                  <label class="option"><input type="radio" name="fulfilment" value="Collection"> We will collect</label>
+                  <label class="option"><input type="radio" name="fulfilment" value="Delivery"> Please deliver</label>
+                </div>
+              </fieldset>
+              <div class="field" id="f-address" hidden>
+                <label for="address">Delivery address</label>
+                <textarea id="address" name="address" maxlength="500" rows="3"></textarea>
+              </div>
+              <div class="row-2">
+                <div class="field" id="f-receiverName">
+                  <label for="receiverName">Name of person collecting or receiving</label>
+                  <input type="text" id="receiverName" name="receiverName" maxlength="100" autocomplete="off">
+                </div>
+                <div class="field" id="f-receiverPhone">
+                  <label for="receiverPhone">Their contact number</label>
+                  <input type="tel" id="receiverPhone" name="receiverPhone" maxlength="30" autocomplete="off">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4 -->
+          <section class="step" aria-labelledby="h-diet">
+            <div class="step-head"><span class="step-no" aria-hidden="true">4</span><h2 id="h-diet">Dietary needs and allergies</h2></div>
+
+            <fieldset class="field" id="f-dietary">
+              <legend>Are there any dietary requirements or food allergies?</legend>
+              <div class="options inline">
+                <label class="option"><input type="radio" name="dietary" value="Yes"> Yes</label>
+                <label class="option"><input type="radio" name="dietary" value="No"> No</label>
+              </div>
+            </fieldset>
+            <div class="field" id="f-dietaryDetails" hidden>
+              <label for="dietaryDetails">Give full details, with quantities</label>
+              <p class="hint" id="dd-hint">For example, 2 nut-free, 1 gluten-free, 3 vegetarian. Please do not include names.</p>
+              <textarea id="dietaryDetails" name="dietaryDetails" maxlength="2000" aria-describedby="dd-hint"></textarea>
+            </div>
+          </section>
+
+          <!-- 5 -->
+          <section class="step" aria-labelledby="h-you">
+            <div class="step-head"><span class="step-no" aria-hidden="true">5</span><h2 id="h-you">Your details</h2></div>
+
+            <div class="row-2">
+              <div class="field" id="f-name">
+                <label for="name">Your name</label>
+                <input type="text" id="name" name="name" maxlength="100" autocomplete="name">
+              </div>
+              <div class="field" id="f-email">
+                <label for="email">Email address</label>
+                <input type="email" id="email" name="email" maxlength="200" autocomplete="email">
+              </div>
+              <div class="field" id="f-phone">
+                <label for="phone">Contact telephone number</label>
+                <input type="tel" id="phone" name="phone" maxlength="30" autocomplete="tel">
+              </div>
+              <div class="field" id="f-department">
+                <label for="department">Department, team or organisation</label>
+                <input type="text" id="department" name="department" maxlength="150" autocomplete="organization">
+              </div>
+            </div>
+            <div class="field" id="f-costCentre">
+              <label for="costCentre">Cost centre or budget code</label>
+              <p class="hint" id="cc-hint">If you do not have one, enter N/A</p>
+              <input type="text" id="costCentre" name="costCentre" maxlength="50" class="w-short" aria-describedby="cc-hint">
+            </div>
+            <div class="field" id="f-notes">
+              <label for="notes">Anything else we should know? <span class="optional">(optional)</span></label>
+              <textarea id="notes" name="notes" maxlength="2000"></textarea>
+            </div>
+          </section>
+
+        </form>
+      </div>
+
+      <aside class="docket-wrap" aria-labelledby="docket-title">
+        <div class="docket">
+          <div class="docket-top">
+            <h2 id="docket-title">Your order</h2>
+            <span id="docket-site">No site chosen</span>
+          </div>
+          <dl id="docket-body"></dl>
+        </div>
+        <p class="docket-note">Check this summary before you send the form.</p>
+      </aside>
+
+      <div class="submit-row">
+        <button type="submit" form="booking" class="btn btn-large" id="submit-btn">Send booking request</button>
+        <p>The Catering Team will email you to confirm or to ask questions.</p>
+      </div>
+    </div>
+
+    <div id="done-view" hidden>
+      <div class="done" tabindex="-1" id="done-panel">
+        <h1>Booking request sent</h1>
+        <div class="ref">Your reference<strong id="done-ref"></strong></div>
+        <p>The Catering Team will email <strong id="done-email"></strong> to confirm your booking or to ask any questions.</p>
+        <p>Your booking is not confirmed until you hear from them. Please quote your reference if you need to change or cancel it.</p>
+        <button type="button" class="btn btn-quiet" id="again-btn">Make another booking</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Learning Without Limits Academy Trust. Questions about a booking? Email <a href="mailto:catering@lwlat.org.uk">catering@lwlat.org.uk</a>.</p>
+    </div>
+  </footer>
+
+  <script>
+    // ---------- settings the Catering Team may want to change ----------
+    const MIN_NOTICE_WORKING_DAYS = 3;
+
+    const HOSPITALITY_ITEMS = [
+      "Tea, coffee and biscuits",
+      "Cold drinks and water",
+      "Pastry selection",
+      "Sandwich platters",
+      "Small buffet (3 items)",
+      "Large buffet (5 items)",
+      "Cakes and sweet treats",
+      "Fruit bowl",
+      "Other",
+    ];
+
+    const LUNCH_OPTIONS = [
+      "Tuna sandwich, cookie and water",
+      "Cheese sandwich, cookie and water",
+      "Ham sandwich, cookie and water",
+      "Chicken tikka wrap (halal), cookie and water",
+    ];
+    // -------------------------------------------------------------------
+
+    const form = document.getElementById("booking");
+    const $ = (id) => document.getElementById(id);
+
+    // Build the option lists.
+    $("hospitality-options").innerHTML = HOSPITALITY_ITEMS.map((item) =>
+      `<label class="option"><input type="checkbox" name="hospitalityItems" value="${escapeHtml(item)}"> ${escapeHtml(item)}</label>`
+    ).join("");
+    $("lunch-options").innerHTML = LUNCH_OPTIONS.map((item, i) =>
+      `<div class="lunch-row"><label for="lunch-${i}">${escapeHtml(item)}</label>` +
+      `<input type="number" id="lunch-${i}" data-lunch="${escapeHtml(item)}" min="0" max="2000" step="1" inputmode="numeric" placeholder=" " aria-label="Quantity: ${escapeHtml(item)}"></div>`
+    ).join("");
+
+    // Earliest date that gives enough notice.
+    const earliest = addWorkingDays(new Date(), MIN_NOTICE_WORKING_DAYS);
+    const earliestIso = toIso(earliest);
+    $("date").min = earliestIso;
+    $("date-hint").textContent = `Earliest date: ${formatDate(earliestIso)}`;
+    $("notice-text").textContent = `Please allow at least ${MIN_NOTICE_WORKING_DAYS} working days' notice.`;
+
+    form.addEventListener("input", update);
+    form.addEventListener("change", update);
+    // Once errors are showing, clear each one as soon as it is fixed.
+    form.addEventListener("change", recheck);
+    form.addEventListener("input", recheck);
+    function recheck() {
+      if ($("error-summary").hidden) return;
+      const errors = validate(collect());
+      errors.length ? showErrors(errors, false) : clearErrors();
+    }
+    update();
+
+    // ---------- show and hide the parts that depend on earlier answers ----------
+
+    function update() {
+      const type = value("type");
+      $("order-waiting").hidden = !!type;
+      $("order-hospitality").hidden = type !== "hospitality";
+      $("order-lunch").hidden = type !== "packed-lunch";
+      $("h-order").textContent = type === "hospitality" ? "Your hospitality order"
+        : type === "packed-lunch" ? "Your packed lunch order" : "Your order";
+      $("f-address").hidden = value("fulfilment") !== "Delivery";
+      $("f-dietaryDetails").hidden = value("dietary") !== "Yes";
+      updateLunchTotal();
+      renderDocket();
+    }
+
+    function updateLunchTotal() {
+      const total = Object.values(lunches()).reduce((a, b) => a + b, 0);
+      const people = Number($("people").value) || 0;
+      const el = $("lunch-total");
+      el.hidden = total === 0;
+      el.classList.toggle("warn", people > 0 && total !== people);
+      el.textContent = people > 0 && total !== people
+        ? `${total} lunches ordered for ${people} people. Please check this is right.`
+        : `${total} lunches in total`;
+    }
+
+    function renderDocket() {
+      const d = collect();
+      $("docket-site").textContent = d.site || "No site chosen";
+
+      const rows = [];
+      const row = (label, html) => rows.push(
+        `<div class="d-row"><dt>${label}</dt>${html ? `<dd>${html}</dd>` : `<dd class="empty">Not given</dd>`}</div>`
+      );
+
+      row("Booking", d.type === "hospitality" ? "Hospitality" : d.type === "packed-lunch" ? "Packed lunches" : "");
+      row("Event", escapeHtml(d.eventName));
+      row("Date", d.date ? escapeHtml(formatDate(d.date)) : "");
+      row("Time", escapeHtml(d.time));
+      row("People", d.people ? escapeHtml(d.people) : "");
+
+      if (d.type === "hospitality") {
+        row("Where", escapeHtml(d.venue));
+        row("Items", d.hospitalityItems.length
+          ? `<ul>${d.hospitalityItems.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : "");
+      } else if (d.type === "packed-lunch") {
+        const entries = Object.entries(d.lunches);
+        row("Lunches", entries.length
+          ? `<ul>${entries.map(([k, v]) => `<li><span>${escapeHtml(k)}</span><span>${v}</span></li>`).join("")}</ul>` : "");
+        row("Handover", d.fulfilment === "Delivery" ? "Delivery" : d.fulfilment === "Collection" ? "Collection" : "");
+      }
+
+      let html = rows.join("");
+      if (d.dietary === "Yes") html += `<div class="d-allergy"><span class="allergy">Dietary needs or allergies</span></div>`;
+      $("docket-body").innerHTML = html;
+    }
+
+    // ---------- reading the form ----------
+
+    function value(name) {
+      const el = form.querySelector(`[name="${name}"]:checked`);
+      return el ? el.value : "";
+    }
+
+    function lunches() {
+      const out = {};
+      form.querySelectorAll("[data-lunch]").forEach((input) => {
+        const n = Number(input.value);
+        if (input.value !== "" && n > 0) out[input.dataset.lunch] = n;
+      });
+      return out;
+    }
+
+    function collect() {
+      const v = (id) => $(id).value.trim();
+      const d = {
+        website: $("website").value,
+        type: value("type"),
+        site: value("site"),
+        eventName: v("eventName"),
+        date: v("date"),
+        time: v("time"),
+        people: v("people"),
+        dietary: value("dietary"),
+        dietaryDetails: v("dietaryDetails"),
+        name: v("name"),
+        email: v("email"),
+        phone: v("phone"),
+        department: v("department"),
+        costCentre: v("costCentre"),
+        notes: v("notes"),
+      };
+      if (d.type === "hospitality") {
+        d.venue = v("venue");
+        d.hospitalityItems = [...form.querySelectorAll('[name="hospitalityItems"]:checked')].map((c) => c.value);
+        d.hospitalityDetails = v("hospitalityDetails");
+      }
+      if (d.type === "packed-lunch") {
+        d.lunches = lunches();
+        d.fulfilment = value("fulfilment");
+        d.address = d.fulfilment === "Delivery" ? v("address") : "";
+        d.receiverName = v("receiverName");
+        d.receiverPhone = v("receiverPhone");
+      }
+      if (d.dietary !== "Yes") d.dietaryDetails = "";
+      return d;
+    }
+
+    // ---------- checking the answers ----------
+
+    function validate(d) {
+      const errors = [];
+      const need = (ok, field, message, focusId) => { if (!ok) errors.push({ field, message, focusId }); };
+      const whole = (s, min) => /^\d+$/.test(s) && Number(s) >= min;
+
+      need(d.type, "type", "Choose hospitality or packed lunches", "f-type");
+      need(d.site, "site", "Choose which site the booking is for", "f-site");
+      need(d.eventName, "eventName", "Enter the event or meeting name");
+      if (!d.date) need(false, "date", "Enter the date");
+      else need(d.date >= earliestIso, "date",
+        `Bookings need ${MIN_NOTICE_WORKING_DAYS} working days' notice. Choose ${formatDate(earliestIso)} or later`);
+      need(d.time, "time", "Enter the delivery or service time");
+      need(whole(d.people, 1), "people", "Enter the number of people as a whole number");
+
+      if (d.type === "hospitality") {
+        need(d.venue, "venue", "Enter the room or delivery location");
+        need(d.hospitalityItems.length, "hospitalityItems", "Choose at least one hospitality item", "f-hospitalityItems");
+        if (d.hospitalityItems.includes("Other")) {
+          need(d.hospitalityDetails, "hospitalityDetails", "Tell us what you need under Other");
+        }
+      }
+      if (d.type === "packed-lunch") {
+        const bad = [...form.querySelectorAll("[data-lunch]")].some((i) => i.value !== "" && !whole(i.value, 0));
+        need(!bad, "lunches", "Enter lunch quantities as whole numbers", "f-lunches");
+        if (!bad) need(Object.keys(d.lunches).length, "lunches", "Enter how many of at least one lunch you need", "f-lunches");
+        need(d.fulfilment, "fulfilment", "Choose collection or delivery", "f-fulfilment");
+        if (d.fulfilment === "Delivery") need(d.address, "address", "Enter the delivery address");
+        need(d.receiverName, "receiverName", "Enter the name of the person collecting or receiving the order");
+        need(d.receiverPhone, "receiverPhone", "Enter their contact number");
+      }
+
+      need(d.dietary, "dietary", "Say whether there are any dietary requirements or allergies", "f-dietary");
+      if (d.dietary === "Yes") need(d.dietaryDetails, "dietaryDetails", "Give details of the dietary requirements or allergies");
+
+      need(d.name, "name", "Enter your name");
+      if (!d.email) need(false, "email", "Enter your email address");
+      else need(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email), "email", "Enter a valid email address, like name@lwlat.org.uk");
+      need(d.phone, "phone", "Enter a contact telephone number");
+      need(d.department, "department", "Enter your department, team or organisation");
+      need(d.costCentre, "costCentre", "Enter a cost centre or budget code, or N/A");
+      return errors;
+    }
+
+    function clearErrors() {
+      form.querySelectorAll(".has-error").forEach((el) => el.classList.remove("has-error"));
+      form.querySelectorAll("[aria-invalid]").forEach((el) => el.removeAttribute("aria-invalid"));
+      form.querySelectorAll(".err").forEach((el) => el.remove());
+      $("error-summary").hidden = true;
+    }
+
+    function showErrors(errors, moveFocus = true) {
+      clearErrors();
+      const list = $("error-list");
+      list.innerHTML = "";
+      for (const e of errors) {
+        const wrapper = $("f-" + e.field);
+        const target = e.focusId ? null : $(e.field);
+        if (wrapper) {
+          wrapper.classList.add("has-error");
+          const p = document.createElement("p");
+          p.className = "err";
+          p.id = "err-" + e.field;
+          p.textContent = e.message;
+          const anchor = wrapper.querySelector("legend, label");
+          anchor.insertAdjacentElement("afterend", p);
+        }
+        if (target) {
+          target.setAttribute("aria-invalid", "true");
+          const ids = (target.getAttribute("aria-describedby") || "").split(" ").filter((x) => x && !x.startsWith("err-"));
+          target.setAttribute("aria-describedby", [...ids, "err-" + e.field].join(" "));
+        }
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#" + (e.focusId || e.field);
+        a.textContent = e.message;
+        a.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          const el = e.focusId ? $(e.focusId).querySelector("input") : $(e.field);
+          el.scrollIntoView({ block: "center" });
+          el.focus({ preventScroll: true });
+        });
+        li.appendChild(a);
+        list.appendChild(li);
+      }
+      $("error-summary").hidden = false;
+      if (moveFocus) {
+        $("error-summary").focus();
+        $("error-summary").scrollIntoView({ block: "start" });
+      }
+    }
+
+    // ---------- sending ----------
+
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const d = collect();
+      const errors = validate(d);
+      if (errors.length) return showErrors(errors);
+      clearErrors();
+
+      const btn = $("submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Sending...";
+      try {
+        const res = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(d),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "The booking could not be sent. Please try again.");
+        $("done-ref").textContent = data.reference;
+        $("done-email").textContent = d.email;
+        $("form-view").hidden = true;
+        $("done-view").hidden = false;
+        window.scrollTo(0, 0);
+        $("done-panel").focus();
+      } catch (err) {
+        $("error-list").innerHTML = "";
+        const li = document.createElement("li");
+        li.textContent = navigator.onLine === false
+          ? "You appear to be offline. Check your connection and send the form again."
+          : err.message;
+        $("error-list").appendChild(li);
+        $("error-summary").hidden = false;
+        $("error-summary").focus();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send booking request";
+      }
+    });
+
+    $("again-btn").addEventListener("click", () => {
+      form.reset();
+      update();
+      $("done-view").hidden = true;
+      $("form-view").hidden = false;
+      window.scrollTo(0, 0);
+    });
+
+    // ---------- helpers ----------
+
+    function addWorkingDays(date, n) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      while (n > 0) {
+        d.setDate(d.getDate() + 1);
+        const day = d.getDay();
+        if (day !== 0 && day !== 6) n--;
+      }
+      return d;
+    }
+
+    function toIso(d) {
+      const p = (x) => String(x).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+
+    function formatDate(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-GB", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Catering Admin | LWLAT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* ---------- sign in ---------- */
+    .signin {
+      max-width: 26rem;
+      margin: 64px auto 0;
+      padding: 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-top: 8px solid var(--teal);
+      border-radius: var(--radius-m);
+    }
+    .signin h1 { font-size: 1.6rem; font-weight: 800; }
+    .signin p { margin-top: 8px; color: var(--muted); }
+    .signin form { margin-top: 20px; }
+    .signin .btn { margin-top: 16px; width: 100%; }
+
+    /* ---------- toolbar ---------- */
+    .board-head {
+      display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between;
+      gap: 16px;
+      padding-top: 32px;
+    }
+    .board-head h1 { font-size: clamp(1.7rem, 3.5vw, 2.2rem); font-weight: 800; }
+    .board-head p { color: var(--muted); margin-top: 4px; }
+    .head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      margin-top: 24px;
+      border-bottom: 2px solid var(--line);
+    }
+    .tab {
+      position: relative;
+      padding: 10px 16px 12px;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: var(--radius-s) var(--radius-s) 0 0;
+    }
+    .tab:hover { color: var(--ink); background: var(--teal-wash); }
+    .tab[aria-selected="true"] { color: var(--ink); }
+    .tab[aria-selected="true"]::after {
+      content: ""; position: absolute; left: 8px; right: 8px; bottom: -2px;
+      height: 4px; border-radius: 2px; background: var(--teal);
+    }
+    .tab .count {
+      display: inline-block; min-width: 1.6em; margin-left: 6px; padding: 0 6px;
+      border-radius: 999px; background: var(--teal-deep); color: #fff;
+      font-size: 0.85rem; text-align: center;
+    }
+    .tab .count:empty { display: none; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 11rem)) minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .filters label { font-size: 0.9rem; color: var(--muted); font-weight: 700; }
+    .filters select, .filters input { margin-top: 4px; min-height: 42px; padding: 8px 10px; }
+
+    /* ---------- the rail: bookings grouped by day ---------- */
+    .day { margin-top: 32px; }
+    .day-head {
+      display: flex; align-items: baseline; gap: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .day-head h2 { font-size: 1.3rem; font-weight: 800; }
+    .day-head .when { color: var(--teal-deep); font-weight: 700; }
+    .day-head .meta { margin-left: auto; color: var(--muted); font-size: 0.95rem; }
+
+    .ticket {
+      display: grid;
+      grid-template-columns: 5rem minmax(0, 1fr) auto;
+      gap: 4px 20px;
+      width: 100%;
+      padding: 14px 16px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .ticket:hover { background: var(--teal-wash); }
+    .ticket.is-new { box-shadow: inset 5px 0 0 var(--teal); }
+    .ticket .t-time { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+    .ticket .t-type { display: block; font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+    .ticket .t-title { font-weight: 700; font-size: 1.075rem; }
+    .ticket .t-sub { color: var(--muted); font-size: 0.95rem; }
+    .ticket .t-items { margin-top: 4px; font-size: 0.95rem; }
+    .ticket .t-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .ticket .t-people { font-weight: 700; white-space: nowrap; }
+
+    .empty-state {
+      margin-top: 32px;
+      padding: 32px;
+      border: 2px dashed var(--line);
+      border-radius: var(--radius-m);
+      text-align: center;
+      color: var(--muted);
+    }
+    .load-error { margin-top: 24px; }
+
+    /* ---------- booking detail ---------- */
+    dialog {
+      width: min(680px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-m);
+      color: var(--ink);
+      box-shadow: 0 20px 60px rgba(21, 48, 47, 0.35);
+    }
+    dialog::backdrop { background: rgba(21, 48, 47, 0.45); }
+    .dlg-head {
+      position: sticky; top: 0; z-index: 1;
+      display: flex; align-items: start; justify-content: space-between; gap: 16px;
+      padding: 20px 24px 16px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+    }
+    .dlg-head h2 { font-size: 1.4rem; font-weight: 800; }
+    .dlg-head .ref { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+    .dlg-close {
+      flex: none;
+      width: 44px; height: 44px;
+      border: 2px solid var(--line); border-radius: var(--radius-s);
+      background: var(--paper); color: var(--ink);
+      font-size: 1.5rem; line-height: 1; cursor: pointer;
+    }
+    .dlg-close:hover { border-color: var(--teal-deep); }
+    .dlg-body { padding: 8px 24px 24px; }
+    .dlg-body h3 { font-size: 1.05rem; font-weight: 800; margin-top: 22px; color: var(--teal-deep); }
+    .facts { margin: 8px 0 0; }
+    .facts > div {
+      display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 12px;
+      padding: 7px 0; border-bottom: 1px solid var(--line);
+    }
+    .facts dt { color: var(--muted); }
+    .facts dd { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
+    .facts ul { margin: 0; padding-left: 18px; }
+    .allergy-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: var(--radius-s);
+      background: var(--alert-bg);
+      border: 2px solid var(--alert-line);
+      color: var(--alert);
+    }
+    .allergy-box strong { display: block; margin-bottom: 4px; }
+    .allergy-box p { color: var(--ink); white-space: pre-line; }
+
+    .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .status-btn {
+      min-height: 42px; padding: 8px 14px;
+      border: 2px solid var(--line-strong); border-radius: var(--radius-s);
+      background: var(--paper); color: var(--ink);
+      font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .status-btn:hover { border-color: var(--teal-deep); }
+    .status-btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 24px; }
+    .dlg-actions > div { display: flex; flex-wrap: wrap; gap: 10px; }
+    .saved-msg { color: var(--ok); font-weight: 700; align-self: center; }
+
+    .print-title { display: none; }
+
+    @media (max-width: 760px) {
+      .filters { grid-template-columns: 1fr 1fr; }
+      .filters .search { grid-column: 1 / -1; }
+      .ticket { grid-template-columns: 4rem minmax(0, 1fr); }
+      .ticket .t-side { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
+      .facts > div { grid-template-columns: 1fr; gap: 0; }
+      .facts dt { font-size: 0.9rem; }
+      .dlg-head, .dlg-body { padding-left: 16px; padding-right: 16px; }
+    }
+
+    @media print {
+      body { background: #fff; font-size: 11pt; }
+      .band, .board-head, .tabs, .filters, .site-footer, dialog { display: none !important; }
+      .print-title { display: block; font-size: 16pt; font-weight: 800; margin-bottom: 8pt; }
+      .wrap { max-width: none; padding: 0; }
+      .day { margin-top: 14pt; break-inside: avoid-page; }
+      .ticket { break-inside: avoid; padding: 8pt 0; box-shadow: none !important; }
+      .allergy { box-shadow: inset 0 0 0 1.5px #000; color: #000; background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <header class="band">
+    <div class="wrap">
+      <a class="wordmark" href="/admin">
+        <img src="/lwlat-logo.svg" alt="" hidden>
+        <span class="wordmark-text">Learning Without Limits<span>Academy Trust</span></span>
+      </a>
+      <div class="band-actions">
+        <span class="band-title">Catering admin</span>
+        <button type="button" class="btn btn-on-band" id="signout-btn" hidden>Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Sign in -->
+    <section class="signin" id="signin-view" hidden>
+      <h1>Catering Team sign in</h1>
+      <p>Enter the team password to see and manage bookings.</p>
+      <form id="signin-form" novalidate>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" required>
+          <p class="err" id="signin-err" hidden></p>
+        </div>
+        <button class="btn" type="submit" id="signin-btn">Sign in</button>
+      </form>
+    </section>
+
+    <!-- Board -->
+    <section id="board-view" hidden>
+      <div class="board-head">
+        <div>
+          <h1>Bookings</h1>
+          <p id="last-updated"></p>
+        </div>
+        <div class="head-actions">
+          <button type="button" class="btn btn-quiet" id="refresh-btn">Refresh</button>
+          <button type="button" class="btn btn-quiet" id="csv-btn">Download spreadsheet</button>
+          <button type="button" class="btn btn-quiet" id="print-btn">Print list</button>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Which bookings to show">
+        <button class="tab" role="tab" data-view="new" aria-selected="true">Needs a reply<span class="count" id="count-new"></span></button>
+        <button class="tab" role="tab" data-view="upcoming" aria-selected="false">Upcoming</button>
+        <button class="tab" role="tab" data-view="past" aria-selected="false">Past</button>
+        <button class="tab" role="tab" data-view="all" aria-selected="false">All</button>
+      </div>
+
+      <div class="filters">
+        <div>
+          <label for="f-site">Site</label>
+          <select id="f-site">
+            <option value="">All sites</option>
+            <option>Babington</option><option>Heatherbrook</option><option>Lancaster</option>
+            <option>South Wigston</option><option>Woodstock</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-type">Type</label>
+          <select id="f-type">
+            <option value="">Both</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="packed-lunch">Packed lunches</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-status">Status</label>
+          <select id="f-status">
+            <option value="">Any status</option>
+            <option>New</option><option>Confirmed</option><option>Declined</option>
+            <option>Cancelled</option><option>Completed</option>
+          </select>
+        </div>
+        <div class="search">
+          <label for="f-search">Search</label>
+          <input type="search" id="f-search" placeholder="Name, event, reference or department">
+        </div>
+      </div>
+
+      <p class="print-title" id="print-title"></p>
+      <div class="notice notice-error load-error" id="load-error" hidden></div>
+      <div id="rail"></div>
+    </section>
+  </main>
+
+  <dialog id="detail" aria-labelledby="d-title">
+    <div class="dlg-head">
+      <div>
+        <h2 id="d-title"></h2>
+        <p class="ref" id="d-ref"></p>
+      </div>
+      <button type="button" class="dlg-close" id="d-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="dlg-body" id="d-body"></div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="wrap"><p>Booking details are for the Catering Team only. Do not share or print more than you need.</p></div>
+  </footer>
+
+  <script>
+    const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
+    const KEY = "lwlat-catering-pw";
+    const $ = (id) => document.getElementById(id);
+
+    let bookings = [];
+    let view = "new";
+    let openId = null;
+
+    // ---------- sign in ----------
+
+    function password() {
+      try { return sessionStorage.getItem(KEY) || ""; } catch { return ""; }
+    }
+    function setPassword(pw) {
+      try { pw ? sessionStorage.setItem(KEY, pw) : sessionStorage.removeItem(KEY); } catch {}
+      window.__pw = pw;
+    }
+    function currentPw() { return password() || window.__pw || ""; }
+
+    function showSignIn(message) {
+      setPassword("");
+      $("board-view").hidden = true;
+      $("signout-btn").hidden = true;
+      $("signin-view").hidden = false;
+      $("signin-err").hidden = !message;
+      $("signin-err").textContent = message || "";
+      $("password").setAttribute("aria-invalid", message ? "true" : "false");
+      $("password").focus();
+    }
+
+    $("signin-form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const pw = $("password").value;
+      if (!pw) return showSignIn("Enter the password");
+      setPassword(pw);
+      $("signin-btn").disabled = true;
+      const ok = await load();
+      $("signin-btn").disabled = false;
+      if (ok) {
+        $("password").value = "";
+        $("signin-view").hidden = true;
+        $("board-view").hidden = false;
+        $("signout-btn").hidden = false;
+      }
+    });
+
+    $("signout-btn").addEventListener("click", () => {
+      bookings = [];
+      $("rail").innerHTML = "";
+      showSignIn();
+    });
+
+    // ---------- talking to the server ----------
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: { "content-type": "application/json", authorization: "Bearer " + currentPw() },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        showSignIn("That password is not right. Please try again.");
+        throw new Error("signed-out");
+      }
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      return data;
+    }
+
+    async function load() {
+      try {
+        const data = await api("/api/bookings");
+        bookings = data.bookings;
+        $("load-error").hidden = true;
+        $("last-updated").textContent = "Updated at " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        render();
+        return true;
+      } catch (err) {
+        if (err.message !== "signed-out") {
+          $("load-error").hidden = false;
+          $("load-error").textContent = "Bookings could not be loaded. Check your connection and press Refresh.";
+          $("board-view").hidden = false;
+          $("signin-view").hidden = true;
+        }
+        return false;
+      }
+    }
+
+    $("refresh-btn").addEventListener("click", load);
+
+    // ---------- the board ----------
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        view = tab.dataset.view;
+        document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+        render();
+      });
+    });
+    ["f-site", "f-type", "f-status", "f-search"].forEach((id) => $(id).addEventListener("input", render));
+
+    function today() {
+      const d = new Date();
+      const p = (x) => String(x).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+
+    function filtered() {
+      const t = today();
+      const site = $("f-site").value, type = $("f-type").value, status = $("f-status").value;
+      const q = $("f-search").value.trim().toLowerCase();
+      let list = bookings.filter((b) => {
+        if (view === "new" && b.status !== "New") return false;
+        if (view === "upcoming" && (b.date < t || ["Declined", "Cancelled"].includes(b.status))) return false;
+        if (view === "past" && b.date >= t) return false;
+        if (site && b.site !== site) return false;
+        if (type && b.type !== type) return false;
+        if (status && b.status !== status) return false;
+        if (q) {
+          const hay = [b.id, b.name, b.eventName, b.department, b.email, b.venue, b.costCentre].join(" ").toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      const byTime = (a, b) => (a.date + a.time).localeCompare(b.date + b.time);
+      list.sort(view === "past" ? (a, b) => byTime(b, a) : byTime);
+      return list;
+    }
+
+    function render() {
+      const newCount = bookings.filter((b) => b.status === "New").length;
+      $("count-new").textContent = newCount ? String(newCount) : "";
+
+      const list = filtered();
+      const tabName = document.querySelector('.tab[aria-selected="true"]').firstChild.textContent;
+      $("print-title").textContent = `LWLAT catering bookings: ${tabName} (printed ${new Date().toLocaleDateString("en-GB")})`;
+
+      if (!list.length) {
+        const msg = {
+          new: "Nothing needs a reply. New requests will appear here.",
+          upcoming: "No upcoming bookings match these filters.",
+          past: "No past bookings match these filters.",
+          all: bookings.length ? "No bookings match these filters." : "No bookings yet. Requests sent from the booking form will appear here.",
+        }[view];
+        $("rail").innerHTML = `<p class="empty-state">${msg}</p>`;
+        return;
+      }
+
+      const groups = new Map();
+      for (const b of list) {
+        if (!groups.has(b.date)) groups.set(b.date, []);
+        groups.get(b.date).push(b);
+      }
+
+      let html = "";
+      for (const [date, items] of groups) {
+        const people = items.reduce((n, b) => n + (Number(b.people) || 0), 0);
+        html += `<section class="day" aria-label="${esc(longDate(date))}">
+          <div class="day-head">
+            <h2>${esc(longDate(date))}</h2>${relative(date) ? `<span class="when">${relative(date)}</span>` : ""}
+            <span class="meta">${items.length} booking${items.length === 1 ? "" : "s"}, ${people} people</span>
+          </div>
+          ${items.map(ticket).join("")}
+        </section>`;
+      }
+      $("rail").innerHTML = html;
+      $("rail").querySelectorAll(".ticket").forEach((el) => el.addEventListener("click", () => openDetail(el.dataset.id)));
+    }
+
+    function ticket(b) {
+      return `<button type="button" class="ticket${b.status === "New" ? " is-new" : ""}" data-id="${esc(b.id)}">
+        <span class="t-time">${esc(b.time || "--:--")}<span class="t-type">${b.type === "hospitality" ? "Hospitality" : "Packed lunch"}</span></span>
+        <span>
+          <span class="t-title">${esc(b.eventName)}</span>
+          <span class="t-sub">${esc(b.site)}${b.type === "hospitality" ? `, ${esc(b.venue)}` : `, ${esc(b.fulfilment)}`}. Booked by ${esc(b.name)} (${esc(b.department)})</span>
+          <span class="t-items" style="display:block">${esc(itemsSummary(b))}</span>
+        </span>
+        <span class="t-side">
+          <span class="pill pill-${esc(b.status)}">${esc(b.status)}</span>
+          <span class="t-people">${esc(b.people)} people</span>
+          ${b.dietary === "Yes" ? `<span class="allergy">Dietary needs</span>` : ""}
+        </span>
+      </button>`;
+    }
+
+    function itemsSummary(b) {
+      if (b.type === "hospitality") return (b.hospitalityItems || []).join(", ");
+      return Object.entries(b.lunches || {}).map(([k, v]) => `${v} x ${k}`).join(", ");
+    }
+
+    // ---------- booking detail ----------
+
+    function openDetail(id) {
+      const b = bookings.find((x) => x.id === id);
+      if (!b) return;
+      openId = id;
+      $("d-title").textContent = b.eventName;
+      $("d-ref").textContent = `${b.id}. Received ${new Date(b.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`;
+
+      const fact = (label, val) => val ? `<div><dt>${label}</dt><dd>${val}</dd></div>` : "";
+      let order = "";
+      if (b.type === "hospitality") {
+        order = fact("Room or location", esc(b.venue)) +
+          fact("Items", `<ul>${(b.hospitalityItems || []).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`) +
+          fact("Details", esc(b.hospitalityDetails));
+      } else {
+        const lunches = Object.entries(b.lunches || {});
+        const total = lunches.reduce((n, [, v]) => n + v, 0);
+        order = fact("Lunches", `<ul>${lunches.map(([k, v]) => `<li>${v} x ${esc(k)}</li>`).join("")}</ul>Total: ${total}`) +
+          fact("Collection or delivery", esc(b.fulfilment)) +
+          fact("Delivery address", esc(b.address)) +
+          fact("Receiver", `${esc(b.receiverName)}, ${telLink(b.receiverPhone)}`);
+      }
+
+      const subject = encodeURIComponent(`Your catering booking ${b.id}: ${b.eventName}`);
+      $("d-body").innerHTML = `
+        ${b.dietary === "Yes" ? `<div class="allergy-box" role="note"><strong>Dietary needs or allergies</strong><p>${esc(b.dietaryDetails)}</p></div>` : ""}
+
+        <h3>Status</h3>
+        <div class="status-row" role="group" aria-label="Booking status">
+          ${STATUSES.map((s) => `<button type="button" class="status-btn" data-status="${s}" aria-pressed="${b.status === s}">${s}</button>`).join("")}
+        </div>
+
+        <h3>Booking</h3>
+        <dl class="facts">
+          ${fact("Type", b.type === "hospitality" ? "Hospitality" : "Packed lunches")}
+          ${fact("Site", esc(b.site))}
+          ${fact("Date", esc(longDate(b.date)))}
+          ${fact("Time", esc(b.time))}
+          ${fact("Number of people", esc(b.people))}
+          ${order}
+          ${fact("Other information", esc(b.notes))}
+        </dl>
+
+        <h3>Booked by</h3>
+        <dl class="facts">
+          ${fact("Name", esc(b.name))}
+          ${fact("Department", esc(b.department))}
+          ${fact("Email", `<a href="mailto:${esc(b.email)}?subject=${subject}">${esc(b.email)}</a>`)}
+          ${fact("Telephone", telLink(b.phone))}
+          ${fact("Cost centre", esc(b.costCentre))}
+        </dl>
+
+        <h3><label for="d-notes">Catering Team notes</label></h3>
+        <p class="hint">Only the Catering Team can see these</p>
+        <textarea id="d-notes" maxlength="2000">${esc(b.cateringNotes)}</textarea>
+
+        <div class="dlg-actions">
+          <div>
+            <button type="button" class="btn" id="d-save">Save notes</button>
+            <span class="saved-msg" id="d-saved" role="status"></span>
+          </div>
+          <div>
+            <a class="btn btn-quiet" href="mailto:${esc(b.email)}?subject=${subject}">Email ${esc(b.name.split(" ")[0])}</a>
+            <button type="button" class="btn btn-danger" id="d-delete">Delete booking</button>
+          </div>
+        </div>`;
+
+      $("d-body").querySelectorAll(".status-btn").forEach((btn) =>
+        btn.addEventListener("click", () => save({ status: btn.dataset.status }, `Marked as ${btn.dataset.status}`)));
+      $("d-save").addEventListener("click", () => save({ cateringNotes: $("d-notes").value }, "Notes saved"));
+      $("d-delete").addEventListener("click", remove);
+
+      if (!$("detail").open) $("detail").showModal();
+    }
+
+    async function save(changes, message) {
+      try {
+        const data = await api(`/api/bookings/${encodeURIComponent(openId)}`, { method: "PATCH", body: JSON.stringify(changes) });
+        const i = bookings.findIndex((x) => x.id === openId);
+        // Keep unsaved notes in the box when only the status changes.
+        const notes = $("d-notes").value;
+        bookings[i] = data.booking;
+        render();
+        openDetail(openId);
+        if (!("cateringNotes" in changes)) $("d-notes").value = notes;
+        $("d-saved").textContent = message;
+      } catch (err) {
+        if (err.message !== "signed-out") $("d-saved").textContent = "Not saved. " + err.message;
+      }
+    }
+
+    async function remove() {
+      const b = bookings.find((x) => x.id === openId);
+      if (!confirm(`Delete the booking "${b.eventName}" (${b.id})? This cannot be undone.`)) return;
+      try {
+        await api(`/api/bookings/${encodeURIComponent(openId)}`, { method: "DELETE" });
+        bookings = bookings.filter((x) => x.id !== openId);
+        $("detail").close();
+        render();
+      } catch (err) {
+        if (err.message !== "signed-out") alert("The booking was not deleted. " + err.message);
+      }
+    }
+
+    $("d-close").addEventListener("click", () => $("detail").close());
+    $("detail").addEventListener("click", (ev) => { if (ev.target === $("detail")) $("detail").close(); });
+
+    // ---------- export and print ----------
+
+    $("print-btn").addEventListener("click", () => window.print());
+
+    $("csv-btn").addEventListener("click", () => {
+      const cols = [
+        ["Reference", (b) => b.id], ["Status", (b) => b.status], ["Date", (b) => b.date], ["Time", (b) => b.time],
+        ["Site", (b) => b.site], ["Type", (b) => b.type === "hospitality" ? "Hospitality" : "Packed lunches"],
+        ["Event", (b) => b.eventName], ["People", (b) => b.people], ["Order", itemsSummary],
+        ["Order details", (b) => b.hospitalityDetails], ["Room or location", (b) => b.venue],
+        ["Collection or delivery", (b) => b.fulfilment], ["Delivery address", (b) => b.address],
+        ["Receiver", (b) => b.receiverName], ["Receiver phone", (b) => b.receiverPhone],
+        ["Dietary needs", (b) => b.dietary], ["Dietary details", (b) => b.dietaryDetails],
+        ["Booked by", (b) => b.name], ["Department", (b) => b.department], ["Email", (b) => b.email],
+        ["Telephone", (b) => b.phone], ["Cost centre", (b) => b.costCentre], ["Other information", (b) => b.notes],
+        ["Catering notes", (b) => b.cateringNotes], ["Received", (b) => b.createdAt],
+      ];
+      const cell = (v) => {
+        let s = String(v ?? "");
+        if (/^[=+\-@]/.test(s)) s = "'" + s; // stop spreadsheets treating text as a formula
+        return `"${s.replace(/"/g, '""')}"`;
+      };
+      const rows = [cols.map(([h]) => cell(h)).join(",")]
+        .concat(filtered().map((b) => cols.map(([, f]) => cell(f(b))).join(",")));
+      const blob = new Blob(["﻿" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `catering-bookings-${today()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // ---------- helpers ----------
+
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+    function telLink(n) {
+      return n ? `<a href="tel:${esc(String(n).replace(/[^\d+]/g, ""))}">${esc(n)}</a>` : "";
+    }
+    function longDate(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+    function relative(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      const now = new Date();
+      const diff = Math.round((new Date(y, m - 1, d) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+      return diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : diff === -1 ? "Yesterday" : "";
+    }
+
+    // ---------- start ----------
+
+    if (currentPw()) {
+      load().then((ok) => {
+        if (ok) {
+          $("board-view").hidden = false;
+          $("signout-btn").hidden = false;
+        }
+      });
+    } else {
+      showSignIn();
+    }
+  </script>
+</body>
+</html>
