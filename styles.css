@@ -1,0 +1,304 @@
+/* LWLAT catering bookings: shared styles for the booking form and admin page. */
+
+:root {
+  --teal: #009f9a;        /* trust teal, used for the band and accents */
+  --teal-deep: #00706c;   /* darker shade for buttons and links, readable with white text */
+  --teal-wash: #e7f4f3;
+  --ink: #15302f;
+  --muted: #4b6664;
+  --paper: #ffffff;
+  --page: #f3f8f7;
+  --line: #c8dddb;
+  --line-strong: #8fb3b0;
+  --alert: #8a2c0d;
+  --alert-bg: #fff0e3;
+  --alert-line: #eaa77c;
+  --ok: #17603a;
+  --ok-bg: #e5f4ea;
+  --no: #8f1d1d;
+  --no-bg: #fbe9e9;
+  --grey: #55605f;
+  --grey-bg: #eceeee;
+  --focus: #f2b705;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+p { margin: 0; }
+a { color: var(--teal-deep); }
+[hidden] { display: none !important; }
+
+/* Yellow inner ring with a dark outer ring: visible on white and on teal. */
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- trust band ---------- */
+
+.band {
+  background: var(--teal);
+  color: #fff;
+}
+.band .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 76px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+.wordmark img { height: 48px; width: auto; display: block; }
+.wordmark-text {
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+/* Both lines stay at "large text" size (bold, 19px or more) so white on
+   trust teal meets WCAG AA. */
+.wordmark-text span {
+  display: block;
+  font-weight: 700;
+}
+.band-title {
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-align: right;
+}
+.band-actions { display: flex; align-items: center; gap: 12px; }
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 2px solid var(--teal-deep);
+  border-radius: var(--radius-s);
+  background: var(--teal-deep);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:hover { background: #005a57; border-color: #005a57; }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+.btn-quiet {
+  background: var(--paper);
+  color: var(--teal-deep);
+}
+.btn-quiet:hover { background: var(--teal-wash); border-color: var(--teal-deep); }
+/* Solid white so the label passes contrast on the teal band. */
+.btn-on-band {
+  white-space: nowrap;
+  background: #fff;
+  border-color: #fff;
+  color: var(--teal-deep);
+  min-height: 44px;
+  padding: 8px 16px;
+}
+.btn-on-band:hover { background: var(--teal-wash); border-color: var(--teal-wash); }
+.btn-text {
+  background: none;
+  border-color: transparent;
+  color: var(--teal-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.btn-text:hover { background: var(--teal-wash); border-color: transparent; }
+.btn-danger { background: var(--paper); color: var(--no); border-color: var(--no); }
+.btn-danger:hover { background: var(--no-bg); border-color: var(--no); }
+.btn-large { min-height: 52px; padding: 12px 28px; font-size: 1.1rem; }
+
+/* ---------- form fields ---------- */
+
+.field { margin-top: 22px; }
+.field:first-child { margin-top: 0; }
+
+label, legend {
+  display: block;
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+legend { padding: 0; margin-bottom: 4px; }
+.optional { font-weight: 400; color: var(--muted); }
+.hint { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+
+input[type="text"], input[type="email"], input[type="tel"], input[type="date"],
+input[type="time"], input[type="number"], input[type="password"], input[type="search"],
+select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  min-height: 46px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+textarea { min-height: 96px; resize: vertical; }
+input:hover, select:hover, textarea:hover { border-color: var(--teal-deep); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  border-color: var(--ink);
+}
+.w-short { max-width: 14rem; }
+.w-num { max-width: 8rem; }
+
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+
+[aria-invalid="true"] { border-color: var(--no) !important; }
+.err {
+  color: var(--no);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+.field.has-error {
+  border-left: 4px solid var(--no);
+  padding-left: 14px;
+}
+
+/* Radio and checkbox options */
+.options { display: grid; gap: 8px; margin-top: 8px; }
+.options.cols-2 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.options.inline { display: flex; flex-wrap: wrap; }
+.option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  font-weight: 400;
+  cursor: pointer;
+}
+.option:hover { border-color: var(--teal-deep); }
+.option input {
+  width: 22px; height: 22px;
+  margin: 1px 0 0;
+  flex: none;
+  accent-color: var(--teal-deep);
+}
+.option:has(input:checked) {
+  border-color: var(--teal-deep);
+  background: var(--teal-wash);
+}
+.option:has(input:focus-visible) { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus); }
+
+/* ---------- small shared pieces ---------- */
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pill-New { background: var(--teal-wash); color: var(--teal-deep); box-shadow: inset 0 0 0 1.5px var(--teal-deep); }
+.pill-Confirmed { background: var(--ok-bg); color: var(--ok); }
+.pill-Declined { background: var(--no-bg); color: var(--no); }
+.pill-Cancelled { background: var(--grey-bg); color: var(--grey); }
+.pill-Completed { background: var(--grey-bg); color: var(--grey); }
+
+.allergy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--alert-bg);
+  color: var(--alert);
+  box-shadow: inset 0 0 0 1.5px var(--alert-line);
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.allergy::before {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.notice {
+  padding: 14px 16px;
+  border-radius: var(--radius-s);
+  border: 2px solid var(--line);
+  background: var(--paper);
+}
+.notice-error { border-color: var(--no); background: var(--no-bg); }
+.notice-error h2 { font-size: 1.15rem; color: var(--no); margin-bottom: 6px; }
+.notice-error ul { margin: 0; padding-left: 20px; }
+.notice-error a { color: var(--no); font-weight: 700; }
+
+.site-footer {
+  margin-top: 56px;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 560px) {
+  .band-actions .band-title { display: none; }
+  .wordmark-text { font-size: 1.2rem; }
+  .btn-on-band { padding: 8px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
