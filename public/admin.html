@@ -212,6 +212,7 @@
       </a>
       <div class="band-actions">
         <span class="band-title">Catering admin</span>
+        <a class="btn btn-on-band" href="/">Booking form</a>
         <button type="button" class="btn btn-on-band" id="signout-btn" hidden>Sign out</button>
       </div>
     </div>
@@ -308,6 +309,7 @@
   <script>
     const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
     const KEY = "lwlat-catering-pw";
+    const BESPOKE = "Bespoke, themed or other";
     const $ = (id) => document.getElementById(id);
 
     let bookings = [];
@@ -492,7 +494,9 @@
 
     function itemsSummary(b) {
       if (b.type === "hospitality") return (b.hospitalityItems || []).join(", ");
-      return Object.entries(b.lunches || {}).map(([k, v]) => `${v} x ${k}`).join(", ");
+      return Object.entries(b.lunches || {})
+        .map(([k, v]) => k === BESPOKE && b.bespokeDetails ? `${v} x ${k} (${b.bespokeDetails})` : `${v} x ${k}`)
+        .join(", ");
     }
 
     // ---------- booking detail ----------
@@ -514,6 +518,7 @@
         const lunches = Object.entries(b.lunches || {});
         const total = lunches.reduce((n, [, v]) => n + v, 0);
         order = fact("Lunches", `<ul>${lunches.map(([k, v]) => `<li>${v} x ${esc(k)}</li>`).join("")}</ul>Total: ${total}`) +
+          fact("Bespoke, themed or other", esc(b.bespokeDetails)) +
           fact("Collection or delivery", esc(b.fulfilment)) +
           fact("Delivery address", esc(b.address)) +
           fact("Receiver", `${esc(b.receiverName)}, ${telLink(b.receiverPhone)}`);
@@ -612,7 +617,7 @@
         ["Reference", (b) => b.id], ["Status", (b) => b.status], ["Date", (b) => b.date], ["Time", (b) => b.time],
         ["Site", (b) => b.site], ["Type", (b) => b.type === "hospitality" ? "Hospitality" : "Packed lunches"],
         ["Event", (b) => b.eventName], ["People", (b) => b.people], ["Order", itemsSummary],
-        ["Order details", (b) => b.hospitalityDetails], ["Room or location", (b) => b.venue],
+        ["Order details", (b) => b.hospitalityDetails || b.bespokeDetails], ["Room or location", (b) => b.venue],
         ["Collection or delivery", (b) => b.fulfilment], ["Delivery address", (b) => b.address],
         ["Receiver", (b) => b.receiverName], ["Receiver phone", (b) => b.receiverPhone],
         ["Dietary needs", (b) => b.dietary], ["Dietary details", (b) => b.dietaryDetails],

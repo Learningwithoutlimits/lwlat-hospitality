@@ -131,6 +131,7 @@ a { color: var(--teal-deep); }
 }
 .btn-quiet:hover { background: var(--teal-wash); border-color: var(--teal-deep); }
 .btn-on-band {
+  white-space: nowrap;
   background: transparent;
   border-color: #fff;
   color: #fff;
@@ -279,6 +280,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 }
 
 @media (max-width: 560px) {
+  .band-actions .band-title { display: none; }
   .band-title { font-size: 1rem; }
   .wordmark-text { font-size: 1.05rem; }
   .wordmark-text span { font-size: 0.85rem; }

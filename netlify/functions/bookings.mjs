@@ -19,6 +19,7 @@ const SITES = ["Babington", "Heatherbrook", "Lancaster", "South Wigston", "Woods
 const TYPES = ["hospitality", "packed-lunch"];
 const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
 const MAX_BODY_BYTES = 20000;
+const BESPOKE = "Bespoke, themed or other";
 
 const store = () => getStore({ name: "bookings", consistency: "strong" });
 
@@ -138,6 +139,10 @@ function validateBooking(b) {
     }
     if (Object.keys(out.lunches).length === 0) {
       throw new BadRequest("Please order at least one packed lunch.");
+    }
+    out.bespokeDetails = out.lunches[BESPOKE] ? text(b.bespokeDetails, 1000) : "";
+    if (out.lunches[BESPOKE] && !out.bespokeDetails) {
+      throw new BadRequest("Please describe the bespoke, themed or other lunch you would like.");
     }
     out.receiverName = required(b.receiverName, "the name of the person receiving the order", 100);
     out.receiverPhone = required(b.receiverPhone, "the receiver's contact number", 30);

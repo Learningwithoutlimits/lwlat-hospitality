@@ -67,6 +67,8 @@
       border-radius: var(--radius-s);
     }
     .lunch-row label { font-weight: 500; }
+    .lunch-row .row-hint { display: block; color: var(--muted); font-size: 0.9rem; }
+    #f-bespokeDetails { margin-top: 14px; }
     .lunch-row input { margin-top: 0; text-align: right; }
     .lunch-row:has(input:not(:placeholder-shown)) { border-color: var(--teal-deep); background: var(--teal-wash); }
     .lunch-total { margin-top: 10px; font-weight: 700; }
@@ -165,7 +167,10 @@
         <img src="/lwlat-logo.svg" alt="" hidden>
         <span class="wordmark-text">Learning Without Limits<span>Academy Trust</span></span>
       </a>
-      <span class="band-title">Catering bookings</span>
+      <div class="band-actions">
+        <span class="band-title">Catering bookings</span>
+        <a class="btn btn-on-band" href="/admin">Catering Team login</a>
+      </div>
     </div>
   </header>
 
@@ -274,7 +279,18 @@
               <fieldset class="field" id="f-lunches">
                 <legend>How many of each lunch?</legend>
                 <p class="hint">Leave blank any you do not need</p>
-                <div class="lunch-grid" id="lunch-options"></div>
+                <div class="lunch-grid" id="lunch-options">
+                  <!-- The set lunches are added here by the script below. -->
+                  <div class="lunch-row" id="bespoke-row">
+                    <label for="lunch-bespoke">Bespoke, themed or other lunch<span class="row-hint">Describe it below</span></label>
+                    <input type="number" id="lunch-bespoke" data-lunch="Bespoke, themed or other" min="0" max="2000" step="1" inputmode="numeric" placeholder=" ">
+                  </div>
+                </div>
+                <div class="field" id="f-bespokeDetails" hidden>
+                  <label for="bespokeDetails">What would you like?</label>
+                  <p class="hint" id="bespoke-hint">For example, a themed lunch for a celebration, a different sandwich filling or wraps instead of sandwiches. The Catering Team will tell you if they can provide it.</p>
+                  <textarea id="bespokeDetails" name="bespokeDetails" maxlength="1000" aria-describedby="bespoke-hint"></textarea>
+                </div>
                 <p class="lunch-total" id="lunch-total" hidden></p>
               </fieldset>
               <fieldset class="field" id="f-fulfilment">
@@ -386,6 +402,7 @@
   <footer class="site-footer">
     <div class="wrap">
       <p>Learning Without Limits Academy Trust. Questions about a booking? Email <a href="mailto:catering@lwlat.org.uk">catering@lwlat.org.uk</a>.</p>
+      <p><a href="/admin">Catering Team login</a></p>
     </div>
   </footer>
 
@@ -420,10 +437,11 @@
     $("hospitality-options").innerHTML = HOSPITALITY_ITEMS.map((item) =>
       `<label class="option"><input type="checkbox" name="hospitalityItems" value="${escapeHtml(item)}"> ${escapeHtml(item)}</label>`
     ).join("");
-    $("lunch-options").innerHTML = LUNCH_OPTIONS.map((item, i) =>
+    $("bespoke-row").insertAdjacentHTML("beforebegin", LUNCH_OPTIONS.map((item, i) =>
       `<div class="lunch-row"><label for="lunch-${i}">${escapeHtml(item)}</label>` +
       `<input type="number" id="lunch-${i}" data-lunch="${escapeHtml(item)}" min="0" max="2000" step="1" inputmode="numeric" placeholder=" " aria-label="Quantity: ${escapeHtml(item)}"></div>`
-    ).join("");
+    ).join(""));
+    const BESPOKE = "Bespoke, themed or other";
 
     // Earliest date that gives enough notice.
     const earliest = addWorkingDays(new Date(), MIN_NOTICE_WORKING_DAYS);
@@ -455,6 +473,7 @@
         : type === "packed-lunch" ? "Your packed lunch order" : "Your order";
       $("f-address").hidden = value("fulfilment") !== "Delivery";
       $("f-dietaryDetails").hidden = value("dietary") !== "Yes";
+      $("f-bespokeDetails").hidden = !(lunches()[BESPOKE] > 0);
       updateLunchTotal();
       renderDocket();
     }
@@ -493,6 +512,7 @@
         const entries = Object.entries(d.lunches);
         row("Lunches", entries.length
           ? `<ul>${entries.map(([k, v]) => `<li><span>${escapeHtml(k)}</span><span>${v}</span></li>`).join("")}</ul>` : "");
+        if (d.lunches[BESPOKE]) row("Bespoke", escapeHtml(d.bespokeDetails));
         row("Handover", d.fulfilment === "Delivery" ? "Delivery" : d.fulfilment === "Collection" ? "Collection" : "");
       }
 
@@ -543,6 +563,7 @@
       }
       if (d.type === "packed-lunch") {
         d.lunches = lunches();
+        d.bespokeDetails = d.lunches[BESPOKE] ? v("bespokeDetails") : "";
         d.fulfilment = value("fulfilment");
         d.address = d.fulfilment === "Delivery" ? v("address") : "";
         d.receiverName = v("receiverName");
@@ -579,6 +600,7 @@
         const bad = [...form.querySelectorAll("[data-lunch]")].some((i) => i.value !== "" && !whole(i.value, 0));
         need(!bad, "lunches", "Enter lunch quantities as whole numbers", "f-lunches");
         if (!bad) need(Object.keys(d.lunches).length, "lunches", "Enter how many of at least one lunch you need", "f-lunches");
+        if (d.lunches[BESPOKE]) need(d.bespokeDetails, "bespokeDetails", "Describe the bespoke, themed or other lunch you would like");
         need(d.fulfilment, "fulfilment", "Choose collection or delivery", "f-fulfilment");
         if (d.fulfilment === "Delivery") need(d.address, "address", "Enter the delivery address");
         need(d.receiverName, "receiverName", "Enter the name of the person collecting or receiving the order");
