@@ -1,15 +1,20 @@
 // Bookings API for the hospitality form and the catering admin page.
 //
-//   POST   /api/bookings        public, creates a booking request
-//   GET    /api/bookings        admin, lists every booking
-//   PATCH  /api/bookings/:id    admin, updates status and catering notes
-//   DELETE /api/bookings/:id    admin, deletes a booking
+//   POST   /api/bookings        any signed-in staff member, creates a booking
+//                                request. With "staffEntry": true, the Catering
+//                                Team adds a booking by hand, with looser rules.
+//   GET    /api/bookings        Catering Team, lists every booking
+//   PATCH  /api/bookings/:id    Catering Team, updates status and catering notes
+//   DELETE /api/bookings/:id    Catering Team, deletes a booking
 //
-// Admin requests send the password from the ADMIN_PASSWORD environment
-// variable as "Authorization: Bearer <password>".
+// Every request carries the person's Microsoft sign-in token as
+// "Authorization: Bearer <token>". The Catering Team are the people with the
+// Catering.Admin app role in Entra.
 
 import { getStore } from "@netlify/blobs";
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import { notifyNewBooking } from "../lib/notify.mjs";
+import { signedInUser } from "../lib/auth.mjs";
 
 export const config = {
   path: ["/api/bookings", "/api/bookings/:id"],
@@ -26,10 +31,12 @@ const store = () => getStore({ name: "bookings", consistency: "strong" });
 export default async (req, context) => {
   const id = context.params?.id;
   try {
-    if (req.method === "POST" && !id) return await createBooking(req);
-    if (!isAdmin(req)) return json({ error: "Incorrect password." }, 401);
+    const user = await signedInUser(req);
+    if (!user) return json({ error: "Please sign in with your LWLAT Microsoft account." }, 401);
+    if (req.method === "POST" && !id) return await createBooking(req, user);
+    if (!user.isAdmin) return json({ error: "Your account does not have access to the Catering Team page." }, 403);
     if (req.method === "GET" && !id) return await listBookings();
-    if (req.method === "PATCH" && id) return await updateBooking(id, req);
+    if (req.method === "PATCH" && id) return await updateBooking(id, req, user);
     if (req.method === "DELETE" && id) return await deleteBooking(id);
     return json({ error: "Not found." }, 404);
   } catch (err) {
@@ -41,21 +48,48 @@ export default async (req, context) => {
 
 // ---------- handlers ----------
 
-async function createBooking(req) {
+async function createBooking(req, user) {
   const body = await readJson(req);
+  const staff = body.staffEntry === true;
+  if (staff && !user.isAdmin) {
+    return json({ error: "Your account does not have access to add bookings for the Catering Team." }, 403);
+  }
+  // A normal booking is always made in the signed-in person's own name.
+  if (!staff) {
+    body.name = user.name || user.email;
+    body.email = user.email;
+  }
 
   // Honeypot field, hidden from people. Bots tend to fill it in.
   if (body.website) return json({ ok: true, reference: "HB-000000-0000" }, 201);
 
-  const booking = validateBooking(body);
+  const booking = validateBooking(body, staff);
   const now = new Date();
   booking.id = makeReference(now);
-  booking.status = "New";
-  booking.cateringNotes = "";
+  if (staff) {
+    booking.status = body.status === undefined ? "Confirmed" : oneOf(body.status, STATUSES, "a status");
+    booking.cateringNotes = text(body.cateringNotes, 2000);
+    booking.addedByStaff = true;
+  } else {
+    booking.status = "New";
+    booking.cateringNotes = "";
+  }
+  booking.submittedBy = { name: user.name, email: user.email };
   booking.createdAt = now.toISOString();
   booking.updatedAt = booking.createdAt;
 
   await store().setJSON(booking.id, booking);
+
+  // Tell the site's catering manager. Bookings the team adds themselves need
+  // no alert, and a failed email must not lose the booking.
+  if (!staff) {
+    try {
+      await notifyNewBooking(booking);
+    } catch (err) {
+      console.error("Booking alert failed", booking.id, err);
+    }
+  }
+
   return json({ ok: true, reference: booking.id }, 201);
 }
 
@@ -66,7 +100,7 @@ async function listBookings() {
   return json({ bookings: bookings.filter(Boolean) });
 }
 
-async function updateBooking(id, req) {
+async function updateBooking(id, req, user) {
   const s = store();
   const booking = await s.get(id, { type: "json" });
   if (!booking) return json({ error: "Booking not found." }, 404);
@@ -80,6 +114,7 @@ async function updateBooking(id, req) {
     booking.cateringNotes = text(body.cateringNotes, 2000);
   }
   booking.updatedAt = new Date().toISOString();
+  booking.updatedBy = user.name || user.email;
 
   await s.setJSON(id, booking);
   return json({ ok: true, booking });
@@ -94,19 +129,22 @@ async function deleteBooking(id) {
 
 class BadRequest extends Error {}
 
-function validateBooking(b) {
+// Bookings the Catering Team adds themselves, such as phone orders or past
+// orders, may be missing contact details, so those fields become optional.
+function validateBooking(b, staff = false) {
+  const ask = staff ? (value, label, max) => text(value, max) : required;
   const out = {
     site: oneOf(b.site, SITES, "which site the booking is for"),
     type: oneOf(b.type, TYPES, "hospitality or packed lunches"),
     name: required(b.name, "your name", 100),
-    email: email(b.email),
-    phone: required(b.phone, "a contact telephone number", 30),
-    department: required(b.department, "your department, team or organisation", 150),
+    email: staff && !text(b.email, 200) ? "" : email(b.email),
+    phone: ask(b.phone, "a contact telephone number", 30),
+    department: ask(b.department, "your department, team or organisation", 150),
     date: isoDate(b.date),
-    time: required(b.time, "a delivery or service time", 50),
+    time: ask(b.time, "a delivery or service time", 50),
     people: wholeNumber(b.people, "the number of people", 1, 2000),
     eventName: required(b.eventName, "an event or meeting name", 150),
-    costCentre: required(b.costCentre, "a cost centre or budget code", 50),
+    costCentre: ask(b.costCentre, "a cost centre or budget code", 50),
     dietary: oneOf(b.dietary, ["Yes", "No"], "whether there are dietary requirements"),
     dietaryDetails: text(b.dietaryDetails, 2000),
     notes: text(b.notes, 2000),
@@ -117,7 +155,7 @@ function validateBooking(b) {
   }
 
   if (out.type === "hospitality") {
-    out.venue = required(b.venue, "the venue, room or delivery location", 150);
+    out.venue = ask(b.venue, "the venue, room or delivery location", 150);
     if (!Array.isArray(b.hospitalityItems) || b.hospitalityItems.length === 0) {
       throw new BadRequest("Please choose at least one hospitality item.");
     }
@@ -126,7 +164,7 @@ function validateBooking(b) {
   } else {
     out.fulfilment = oneOf(b.fulfilment, ["Collection", "Delivery"], "collection or delivery");
     out.address = text(b.address, 500);
-    if (out.fulfilment === "Delivery" && !out.address) {
+    if (out.fulfilment === "Delivery" && !out.address && !staff) {
       throw new BadRequest("Please give the delivery address.");
     }
     if (!b.lunches || typeof b.lunches !== "object") {
@@ -144,8 +182,8 @@ function validateBooking(b) {
     if (out.lunches[BESPOKE] && !out.bespokeDetails) {
       throw new BadRequest("Please describe the bespoke, themed or other lunch you would like.");
     }
-    out.receiverName = required(b.receiverName, "the name of the person receiving the order", 100);
-    out.receiverPhone = required(b.receiverPhone, "the receiver's contact number", 30);
+    out.receiverName = ask(b.receiverName, "the name of the person receiving the order", 100);
+    out.receiverPhone = ask(b.receiverPhone, "the receiver's contact number", 30);
   }
 
   return out;
@@ -199,17 +237,6 @@ async function readJson(req) {
   } catch {
     throw new BadRequest("The form could not be read.");
   }
-}
-
-function isAdmin(req) {
-  const expected = process.env.ADMIN_PASSWORD;
-  const header = req.headers.get("authorization") || "";
-  const given = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!expected || !given) return false;
-  // Hash both sides so the comparison takes the same time whatever the length.
-  const a = createHash("sha256").update(given).digest();
-  const b = createHash("sha256").update(expected).digest();
-  return timingSafeEqual(a, b);
 }
 
 function makeReference(date) {

@@ -4,6 +4,7 @@
   "description": "Hospitality and packed lunch booking form, with an admin page for the Catering Team.",
   "type": "module",
   "dependencies": {
-    "@netlify/blobs": "^11.1.4"
+    "@netlify/blobs": "^11.1.4",
+    "jose": "^6.2.13"
   }
 }

@@ -22,8 +22,9 @@
     }
     .signin h1 { font-size: 1.6rem; font-weight: 800; }
     .signin p { margin-top: 8px; color: var(--muted); }
-    .signin form { margin-top: 20px; }
-    .signin .btn { margin-top: 16px; width: 100%; }
+    .signin .btn { margin-top: 20px; width: 100%; }
+    .signin .err { margin-top: 16px; color: var(--no); }
+    .loading { padding: 64px 0; color: var(--muted); }
 
     /* ---------- toolbar ---------- */
     .board-head {
@@ -221,17 +222,12 @@
   <main class="wrap">
     <!-- Sign in -->
     <section class="signin" id="signin-view" hidden>
-      <h1>Catering Team sign in</h1>
-      <p>Enter the team password to see and manage bookings.</p>
-      <form id="signin-form" novalidate>
-        <div class="field">
-          <label for="password">Password</label>
-          <input type="password" id="password" autocomplete="current-password" required>
-          <p class="err" id="signin-err" hidden></p>
-        </div>
-        <button class="btn" type="submit" id="signin-btn">Sign in</button>
-      </form>
+      <h1 id="signin-title">Catering Team sign in</h1>
+      <p id="signin-text">Sign in with your LWLAT Microsoft account to see and manage bookings.</p>
+      <button class="btn" type="button" id="signin-btn">Sign in with Microsoft</button>
+      <p class="err" id="signin-err" hidden></p>
     </section>
+    <p class="loading" id="loading-view">Checking your sign-in...</p>
 
     <!-- Board -->
     <section id="board-view" hidden>
@@ -241,6 +237,7 @@
           <p id="last-updated"></p>
         </div>
         <div class="head-actions">
+          <a class="btn" href="/?staff">Add a booking</a>
           <button type="button" class="btn btn-quiet" id="refresh-btn">Refresh</button>
           <button type="button" class="btn btn-quiet" id="csv-btn">Download spreadsheet</button>
           <button type="button" class="btn btn-quiet" id="print-btn">Print list</button>
@@ -306,9 +303,10 @@
     <div class="wrap"><p>Booking details are for the Catering Team only. Do not share or print more than you need.</p></div>
   </footer>
 
+  <script src="/vendor/msal-browser-4.30.0.min.js"></script>
+  <script src="/auth.js"></script>
   <script>
     const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
-    const KEY = "lwlat-catering-pw";
     const BESPOKE = "Bespoke, themed or other";
     const $ = (id) => document.getElementById(id);
 
@@ -318,58 +316,44 @@
 
     // ---------- sign in ----------
 
-    function password() {
-      try { return sessionStorage.getItem(KEY) || ""; } catch { return ""; }
-    }
-    function setPassword(pw) {
-      try { pw ? sessionStorage.setItem(KEY, pw) : sessionStorage.removeItem(KEY); } catch {}
-      window.__pw = pw;
-    }
-    function currentPw() { return password() || window.__pw || ""; }
+    // Only people with the Catering admin role in Entra can use this page.
+    // The server checks the role on every request as well.
 
-    function showSignIn(message) {
-      setPassword("");
+    function showSignIn(message, canSignIn = true) {
+      $("loading-view").hidden = true;
       $("board-view").hidden = true;
-      $("signout-btn").hidden = true;
       $("signin-view").hidden = false;
+      $("signin-btn").hidden = !canSignIn;
+      $("signin-text").hidden = !canSignIn;
+      $("signin-title").textContent = canSignIn ? "Catering Team sign in" : "Catering Team page";
+      $("signout-btn").hidden = canSignIn;
       $("signin-err").hidden = !message;
       $("signin-err").textContent = message || "";
-      $("password").setAttribute("aria-invalid", message ? "true" : "false");
-      $("password").focus();
     }
 
-    $("signin-form").addEventListener("submit", async (ev) => {
-      ev.preventDefault();
-      const pw = $("password").value;
-      if (!pw) return showSignIn("Enter the password");
-      setPassword(pw);
-      $("signin-btn").disabled = true;
-      const ok = await load();
-      $("signin-btn").disabled = false;
-      if (ok) {
-        $("password").value = "";
-        $("signin-view").hidden = true;
-        $("board-view").hidden = false;
-        $("signout-btn").hidden = false;
-      }
-    });
-
-    $("signout-btn").addEventListener("click", () => {
+    function noAccess() {
       bookings = [];
       $("rail").innerHTML = "";
-      showSignIn();
-    });
+      showSignIn("Your account does not have access to this page. If you are in the Catering Team, ask IT to give you the Catering admin role.", false);
+    }
+
+    $("signin-btn").addEventListener("click", () => Auth.signIn());
+    $("signout-btn").addEventListener("click", () => Auth.signOut());
 
     // ---------- talking to the server ----------
 
     async function api(path, options = {}) {
       const res = await fetch(path, {
         ...options,
-        headers: { "content-type": "application/json", authorization: "Bearer " + currentPw() },
+        headers: { "content-type": "application/json", authorization: "Bearer " + await Auth.token() },
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
-        showSignIn("That password is not right. Please try again.");
+        showSignIn("Your sign-in has ended. Please sign in again.");
+        throw new Error("signed-out");
+      }
+      if (res.status === 403) {
+        noAccess();
         throw new Error("signed-out");
       }
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
@@ -388,8 +372,6 @@
         if (err.message !== "signed-out") {
           $("load-error").hidden = false;
           $("load-error").textContent = "Bookings could not be loaded. Check your connection and press Refresh.";
-          $("board-view").hidden = false;
-          $("signin-view").hidden = true;
         }
         return false;
       }
@@ -506,7 +488,9 @@
       if (!b) return;
       openId = id;
       $("d-title").textContent = b.eventName;
-      $("d-ref").textContent = `${b.id}. Received ${new Date(b.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`;
+      const when = new Date(b.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+      const changed = b.updatedBy ? `. Last changed by ${b.updatedBy}` : "";
+      $("d-ref").textContent = `${b.id}. ${b.addedByStaff ? `Added by ${b.submittedBy ? b.submittedBy.name : "the Catering Team"}` : "Received"} ${when}${changed}`;
 
       const fact = (label, val) => val ? `<div><dt>${label}</dt><dd>${val}</dd></div>` : "";
       let order = "";
@@ -563,7 +547,7 @@
             <span class="saved-msg" id="d-saved" role="status"></span>
           </div>
           <div>
-            <a class="btn btn-quiet" href="mailto:${esc(b.email)}?subject=${subject}">Email ${esc(b.name.split(" ")[0])}</a>
+            ${b.email ? `<a class="btn btn-quiet" href="mailto:${esc(b.email)}?subject=${subject}">Email ${esc(b.name.split(" ")[0])}</a>` : ""}
             <button type="button" class="btn btn-danger" id="d-delete">Delete booking</button>
           </div>
         </div>`;
@@ -661,16 +645,16 @@
 
     // ---------- start ----------
 
-    if (currentPw()) {
-      load().then((ok) => {
-        if (ok) {
-          $("board-view").hidden = false;
-          $("signout-btn").hidden = false;
-        }
-      });
-    } else {
-      showSignIn();
-    }
+    Auth.start().then(async (user) => {
+      if (!user) return showSignIn();
+      if (!user.isAdmin) return noAccess();
+      $("loading-view").hidden = true;
+      $("signout-btn").hidden = false;
+      $("board-view").hidden = false;
+      await load();
+    }).catch((err) => {
+      showSignIn(err.message || "Sign-in is not working at the moment. Please try again later.", false);
+    });
   </script>
 </body>
 </html>
