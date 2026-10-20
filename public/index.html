@@ -168,12 +168,6 @@
     .gate h1 { font-size: 1.9rem; font-weight: 800; }
     .gate p { margin-top: 12px; font-size: 1.075rem; }
     .gate .btn { margin-top: 24px; }
-    .signed-in-as {
-      padding: 12px 16px;
-      border-radius: var(--radius-s);
-      background: var(--teal-wash);
-    }
-    .signed-in-as + .row-2 .field:first-child { margin-top: 22px; }
 
     .honey { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -200,23 +194,23 @@
       </a>
       <div class="band-actions">
         <span class="band-title">Catering bookings</span>
-        <a class="btn btn-on-band" href="/admin" id="band-link" hidden>Catering Team</a>
+        <a class="btn btn-on-band" href="/admin" id="band-link">Catering Team login</a>
         <button type="button" class="btn btn-on-band" id="signout-btn" hidden>Sign out</button>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <p class="loading" id="loading-view">Checking your sign-in...</p>
+    <p class="loading" id="loading-view" hidden>Checking your sign-in...</p>
 
     <section class="gate" id="gate-view" hidden>
-      <h1>Book hospitality or packed lunches</h1>
-      <p>Sign in with your LWLAT Microsoft account to request food and drink for a meeting or event, or packed lunches for a trip.</p>
+      <h1>Add a booking</h1>
+      <p>Sign in with your LWLAT Microsoft account to add a booking for the Catering Team.</p>
       <button type="button" class="btn btn-large" id="signin-btn">Sign in with Microsoft</button>
       <p class="err" id="gate-err" hidden></p>
     </section>
 
-    <div class="layout" id="form-view" hidden>
+    <div class="layout" id="form-view">
       <div>
         <div class="intro">
           <h1>Book hospitality or packed lunches</h1>
@@ -397,7 +391,6 @@
           <section class="step" aria-labelledby="h-you">
             <div class="step-head"><span class="step-no" aria-hidden="true">5</span><h2 id="h-you">Your details</h2></div>
 
-            <p class="signed-in-as" id="signed-in-as" hidden></p>
             <div class="row-2">
               <div class="field" id="f-name">
                 <label for="name">Your name</label>
@@ -464,12 +457,10 @@
   <footer class="site-footer">
     <div class="wrap">
       <p>Learning Without Limits Academy Trust. Questions about a booking? Email <a href="mailto:bstephenson@lwlat.org.uk">bstephenson@lwlat.org.uk</a>.</p>
-      <p id="footer-admin" hidden><a href="/admin">Catering Team bookings page</a></p>
+      <p><a href="/admin">Catering Team login</a></p>
     </div>
   </footer>
 
-  <script src="/vendor/msal-browser-4.30.0.min.js"></script>
-  <script src="/auth.js"></script>
   <script>
     // ---------- settings the Catering Team may want to change ----------
     const MIN_NOTICE_WORKING_DAYS = 3;
@@ -511,7 +502,6 @@
     // with the Catering admin role can use it, and the server checks this too.
     const STAFF = new URLSearchParams(location.search).has("staff");
     const STAFF_OPTIONAL = ["email", "phone", "department", "time", "costCentre", "venue", "address", "receiverName", "receiverPhone"];
-    let me = null;
 
     // Earliest date that gives enough notice.
     const earliest = addWorkingDays(new Date(), MIN_NOTICE_WORKING_DAYS);
@@ -550,50 +540,59 @@
     }
     update();
 
-    // ---------- sign-in ----------
+    // ---------- Catering Team sign-in ----------
+    // The booking form is open to everyone and needs no sign-in. Microsoft
+    // sign-in is loaded only for the Catering Team's "Add a booking" mode, and
+    // when Microsoft sends someone back here after they sign in to the admin
+    // page (this page is the return address registered in Entra).
+
+    const returningFromSignIn = /[#&](code|error)=/.test(location.hash);
+    if (STAFF || returningFromSignIn) {
+      $("form-view").hidden = true;
+      $("loading-view").hidden = false;
+      loadAuth()
+        .then(() => Auth.start())
+        .then((user) => {
+          $("loading-view").hidden = true;
+          if (!STAFF) {
+            // Microsoft normally moves the person on to the admin page by now.
+            $("form-view").hidden = false;
+            return;
+          }
+          $("signout-btn").hidden = !user;
+          if (!user) {
+            $("gate-view").hidden = false;
+          } else if (!user.isAdmin) {
+            showGateMessage("Your account does not have access to add bookings for the Catering Team.");
+            $("signin-btn").hidden = true;
+          } else {
+            $("form-view").hidden = false;
+          }
+        })
+        .catch((err) => {
+          $("loading-view").hidden = true;
+          showGateMessage(err.message || "Sign-in is not working at the moment. Please try again later.");
+        });
+    }
 
     $("signin-btn").addEventListener("click", () => Auth.signIn());
     $("signout-btn").addEventListener("click", () => Auth.signOut());
 
-    Auth.start().then((user) => {
-      me = user;
-      $("loading-view").hidden = true;
-      if (!me) {
-        if (STAFF) document.querySelector(".gate p").textContent = "Sign in with your LWLAT Microsoft account to add a booking for the Catering Team.";
-        $("gate-view").hidden = false;
-        return;
-      }
-      if (STAFF && !me.isAdmin) {
-        showGateMessage("Your account does not have access to add bookings for the Catering Team. If you need it, ask IT to give you the Catering admin role.");
-        $("signin-btn").hidden = true;
-        $("signout-btn").hidden = false;
-        return;
-      }
-      $("signout-btn").hidden = false;
-      $("band-link").hidden = !me.isAdmin;
-      $("footer-admin").hidden = !me.isAdmin;
-      fillOwnDetails();
-      $("form-view").hidden = false;
-    }).catch((err) => {
-      $("loading-view").hidden = true;
-      showGateMessage(err.message || "Sign-in is not working at the moment. Please try again later.");
-    });
+    function loadAuth() {
+      const load = (src) => new Promise((resolve, reject) => {
+        const el = document.createElement("script");
+        el.src = src;
+        el.onload = resolve;
+        el.onerror = () => reject(new Error("Sign-in could not be loaded. Check your connection and try again."));
+        document.head.appendChild(el);
+      });
+      return load("/vendor/msal-browser-4.30.0.min.js").then(() => load("/auth.js"));
+    }
 
     function showGateMessage(message) {
       $("gate-view").hidden = false;
       $("gate-err").textContent = message;
       $("gate-err").hidden = false;
-    }
-
-    // A normal booking is made in the signed-in person's own name.
-    function fillOwnDetails() {
-      if (STAFF) return;
-      $("name").value = me.name || me.email;
-      $("email").value = me.email;
-      $("f-name").hidden = true;
-      $("f-email").hidden = true;
-      $("signed-in-as").hidden = false;
-      $("signed-in-as").innerHTML = `Booking as <strong>${escapeHtml(me.name || me.email)}</strong> (${escapeHtml(me.email)})`;
     }
 
     // ---------- show and hide the parts that depend on earlier answers ----------
@@ -817,15 +816,16 @@
       btn.disabled = true;
       btn.textContent = "Sending...";
       try {
-        const headers = { "content-type": "application/json", authorization: "Bearer " + await Auth.token() };
+        const headers = { "content-type": "application/json" };
         if (STAFF) {
+          headers.authorization = "Bearer " + await Auth.token();
           d.staffEntry = true;
           d.status = document.querySelector('[name="staffStatus"]:checked').value;
           d.cateringNotes = $("cateringNotes").value.trim();
         }
         const res = await fetch("/api/bookings", { method: "POST", headers, body: JSON.stringify(d) });
         const data = await res.json().catch(() => ({}));
-        if (res.status === 401) { await Auth.signIn(); return; }
+        if (STAFF && res.status === 401) { await Auth.signIn(); return; }
         if (!res.ok) throw new Error(data.error || "The booking could not be sent. Please try again.");
         if (STAFF) $("done-panel").querySelector("h1").textContent = "Booking added";
         $("done-ref").textContent = data.reference;
@@ -851,7 +851,6 @@
 
     $("again-btn").addEventListener("click", () => {
       form.reset();
-      if (me) fillOwnDetails();
       update();
       $("done-view").hidden = true;
       $("form-view").hidden = false;

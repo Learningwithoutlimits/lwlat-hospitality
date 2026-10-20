@@ -1,6 +1,6 @@
 # LWLAT catering bookings
 
-A booking form for staff to request hospitality or packed lunches, and an admin page where the Catering Team can see, confirm and manage the requests. Everyone signs in with their LWLAT Microsoft account.
+A booking form for staff to request hospitality or packed lunches, and an admin page where the Catering Team can see, confirm and manage the requests. The booking form is open to anyone with the link. The Catering Team signs in to the admin page with their LWLAT Microsoft account.
 
 - **Booking form:** `https://<your-site>.netlify.app/`
 - **Catering admin:** `https://<your-site>.netlify.app/admin`
@@ -14,7 +14,7 @@ Everything runs on Netlify. Bookings are stored in Netlify's own storage (Netlif
 | `public/index.html` | The booking form that staff fill in |
 | `public/admin.html` | The Catering Team's page, open only to people with the Catering admin role |
 | `public/styles.css` | Shared colours, type and layout (trust teal #009f9a) |
-| `public/auth.js` | Microsoft sign-in for both pages |
+| `public/auth.js` | Microsoft sign-in for the Catering Team |
 | `public/vendor/` | Microsoft's sign-in library (MSAL 4.30.0, MIT licence), kept here so the site does not depend on another server |
 | `netlify/functions/bookings.mjs` | The small piece of server code that saves and returns bookings |
 | `netlify/functions/config.mjs` | Tells the pages which Microsoft app to sign in with |
@@ -36,17 +36,19 @@ Everything runs on Netlify. Bookings are stored in Netlify's own storage (Netlif
 
 5. Deploy the site. Netlify will give it an address ending in `.netlify.app`.
 6. Check with IT that this exact address, with a `/` on the end, is the **Single-page application** redirect URI on the app registration. If you add your own domain later, IT must add that address too, or sign-in will fail with an error mentioning "redirect URI".
-7. Test it: sign in and send a booking from the form, then open `/admin` with a Catering Team account and check it appears.
+7. Test it: send a booking from the form, then open `/admin`, sign in with a Catering Team account and check it appears.
 
 ## Who can do what
 
 | Person | Booking form | Catering Team page |
 | --- | --- | --- |
-| Any LWLAT staff member | Signs in and books in their own name | No access |
-| Catering Team (Catering admin role) | Books, and can add bookings for other people | Full access |
-| Anyone outside LWLAT | Cannot sign in | No access |
+| Anyone with the link | Books without signing in | No access |
+| LWLAT staff not in the Catering Team | Books without signing in | No access, even if they sign in |
+| Catering Team (Catering admin role) | Books, and uses **Add a booking** for phone and past orders | Full access after Microsoft sign-in |
 
-To give someone access to the Catering Team page, or take it away, ask IT to change who has the **Catering admin** role on the "LWLAT Catering Bookings" app in Entra. Nothing changes on the website. Bookings from outside organisations are added by the Catering Team using **Add a booking**.
+The Catering Team is the agreed list of people IT has given the **Catering admin** role on the "LWLAT Catering Bookings" app in Entra. To add or remove someone, ask IT to change that list. Nothing changes on the website.
+
+Because only the Catering Team now signs in, IT can also switch on **Assignment required** for the app (Enterprise applications, then Properties). Microsoft will then refuse sign-in to anyone not on the list before they reach the site.
 
 ## Email alerts for catering managers
 
@@ -107,6 +109,7 @@ The site does not send emails by itself. The Catering Team confirms each booking
 The form collects staff names, work email addresses and phone numbers, and dietary or allergy details given as quantities. The form asks people not to name individuals in the dietary box.
 
 - Bookings stay in Netlify's storage until the Catering Team deletes them. Agree how long to keep them, for example to the end of the term after the event, and delete old bookings on that schedule.
-- Everyone signs in with their LWLAT Microsoft account. The website receives each person's name and work email from Microsoft, and nothing else. Only people with the Catering admin role can see or change bookings, and each booking records who made it and who last changed it.
+- The booking form is open, so anyone with the link can send a request. A hidden spam trap catches most automated junk, and the Catering Team can decline or delete anything that is not genuine.
+- Only people with the Catering admin role can see or change bookings, after signing in with Microsoft. The website receives their name and work email from Microsoft, and nothing else. Each booking records who last changed it, and who added it if the Catering Team entered it.
 - When someone leaves the Catering Team, ask IT to remove their Catering admin role.
 - If the form will ever be used to collect information about individual learners, such as named allergies for a trip, it needs sign-off from the trust's Data Protection Officer first.

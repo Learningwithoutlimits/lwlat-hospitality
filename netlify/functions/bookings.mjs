@@ -1,15 +1,15 @@
 // Bookings API for the hospitality form and the catering admin page.
 //
-//   POST   /api/bookings        any signed-in staff member, creates a booking
-//                                request. With "staffEntry": true, the Catering
-//                                Team adds a booking by hand, with looser rules.
+//   POST   /api/bookings        open to anyone, creates a booking request. With
+//                                "staffEntry": true, the Catering Team adds a
+//                                booking by hand, with looser rules.
 //   GET    /api/bookings        Catering Team, lists every booking
 //   PATCH  /api/bookings/:id    Catering Team, updates status and catering notes
 //   DELETE /api/bookings/:id    Catering Team, deletes a booking
 //
-// Every request carries the person's Microsoft sign-in token as
-// "Authorization: Bearer <token>". The Catering Team are the people with the
-// Catering.Admin app role in Entra.
+// Catering Team requests carry the person's Microsoft sign-in token as
+// "Authorization: Bearer <token>". The Catering Team are the people IT has
+// given the Catering.Admin app role in Entra. The booking form needs no sign-in.
 
 import { getStore } from "@netlify/blobs";
 import { randomBytes } from "node:crypto";
@@ -31,9 +31,9 @@ const store = () => getStore({ name: "bookings", consistency: "strong" });
 export default async (req, context) => {
   const id = context.params?.id;
   try {
+    if (req.method === "POST" && !id) return await createBooking(req);
     const user = await signedInUser(req);
     if (!user) return json({ error: "Please sign in with your LWLAT Microsoft account." }, 401);
-    if (req.method === "POST" && !id) return await createBooking(req, user);
     if (!user.isAdmin) return json({ error: "Your account does not have access to the Catering Team page." }, 403);
     if (req.method === "GET" && !id) return await listBookings();
     if (req.method === "PATCH" && id) return await updateBooking(id, req, user);
@@ -48,16 +48,16 @@ export default async (req, context) => {
 
 // ---------- handlers ----------
 
-async function createBooking(req, user) {
+async function createBooking(req) {
   const body = await readJson(req);
   const staff = body.staffEntry === true;
-  if (staff && !user.isAdmin) {
-    return json({ error: "Your account does not have access to add bookings for the Catering Team." }, 403);
-  }
-  // A normal booking is always made in the signed-in person's own name.
-  if (!staff) {
-    body.name = user.name || user.email;
-    body.email = user.email;
+  let user = null;
+  if (staff) {
+    user = await signedInUser(req);
+    if (!user) return json({ error: "Please sign in with your LWLAT Microsoft account." }, 401);
+    if (!user.isAdmin) {
+      return json({ error: "Your account does not have access to add bookings for the Catering Team." }, 403);
+    }
   }
 
   // Honeypot field, hidden from people. Bots tend to fill it in.
@@ -74,7 +74,7 @@ async function createBooking(req, user) {
     booking.status = "New";
     booking.cateringNotes = "";
   }
-  booking.submittedBy = { name: user.name, email: user.email };
+  if (user) booking.submittedBy = { name: user.name, email: user.email };
   booking.createdAt = now.toISOString();
   booking.updatedAt = booking.createdAt;
 
