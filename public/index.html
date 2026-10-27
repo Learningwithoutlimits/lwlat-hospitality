@@ -539,6 +539,10 @@
       $("again-btn").textContent = "Add another booking";
       $("submit-btn").textContent = "Add booking";
       $("docket-note").textContent = "Check the order, then add it to the bookings list.";
+      // Start on the school chosen on the admin page.
+      const SITE_CODES = { ba: "Babington", hpa: "Heatherbrook", la: "Lancaster", swhs: "South Wigston", wpa: "Woodstock", ct: "Central Team" };
+      const preset = SITE_CODES[new URLSearchParams(location.search).get("site")];
+      if (preset) form.querySelector(`[name="site"][value="${preset}"]`).checked = true;
       for (const id of STAFF_OPTIONAL) {
         $(id).closest(".field").querySelector("label").insertAdjacentHTML("beforeend", ' <span class="optional">(optional)</span>');
       }

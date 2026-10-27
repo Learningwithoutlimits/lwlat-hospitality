@@ -30,13 +30,34 @@
     .board-head {
       display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between;
       gap: 16px;
-      padding-top: 32px;
+      padding-top: 20px;
     }
     .board-head h1 { font-size: clamp(1.7rem, 3.5vw, 2.2rem); font-weight: 800; }
     .board-head p { color: var(--muted); margin-top: 4px; }
     .head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
     .head-actions .btn:first-child { order: 1; margin-left: 6px; }
 
+    .schools { margin-top: 24px; }
+    .school-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .school {
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 44px; padding: 8px 16px;
+      border: 2px solid var(--line-strong); border-radius: 999px;
+      background: var(--paper); color: var(--ink);
+      font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .school:hover { border-color: var(--teal-deep); }
+    .school { flex: none; }
+    @media (max-width: 760px) {
+      /* One row that scrolls sideways, rather than four rows of buttons. */
+      .school-buttons { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
+    }
+    .school[aria-pressed="true"] { background: var(--teal-deep); border-color: var(--teal-deep); color: #fff; }
+    .school .count {
+      min-width: 1.6em; padding: 0 6px; border-radius: 999px;
+      background: var(--teal-deep); color: #fff; font-size: 0.85rem; text-align: center;
+    }
+    .school[aria-pressed="true"] .count { background: #fff; color: var(--teal-deep); }
     .tabs {
       display: flex; flex-wrap: wrap; gap: 4px;
       margin-top: 24px;
@@ -68,7 +89,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 11rem)) minmax(0, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 11rem)) minmax(0, 1fr);
       gap: 12px;
       margin-top: 16px;
     }
@@ -235,7 +256,7 @@
 
     @media print {
       body { background: #fff; font-size: 11pt; }
-      .band, .board-head, .tabs, .filters, .site-footer, dialog, .alert-test, .result-count { display: none !important; }
+      .band, .schools, .board-head, .tabs, .filters, .site-footer, dialog, .alert-test, .result-count { display: none !important; }
       .print-title { display: block; font-size: 16pt; font-weight: 800; margin-bottom: 8pt; }
       .wrap { max-width: none; padding: 0; }
       .day { margin-top: 14pt; break-inside: avoid-page; }
@@ -271,13 +292,17 @@
 
     <!-- Board -->
     <section id="board-view" hidden>
+      <nav class="schools" aria-label="Choose a school">
+        <div class="school-buttons" id="school-buttons"></div>
+      </nav>
+
       <div class="board-head">
         <div>
-          <h1>Bookings</h1>
+          <h1 id="board-title">All bookings</h1>
           <p id="last-updated"></p>
         </div>
         <div class="head-actions">
-          <a class="btn" href="/?staff">Add a booking</a>
+          <a class="btn" href="/?staff" id="add-booking">Add a booking</a>
           <button type="button" class="btn btn-text" id="refresh-btn">Refresh</button>
           <button type="button" class="btn btn-text" id="csv-btn">Download spreadsheet</button>
           <button type="button" class="btn btn-text" id="print-btn">Print list</button>
@@ -301,14 +326,6 @@
       </div>
 
       <div class="filters">
-        <div>
-          <label for="f-site">Site</label>
-          <select id="f-site">
-            <option value="">All sites</option>
-            <option>Babington</option><option>Heatherbrook</option><option>Lancaster</option>
-            <option>South Wigston</option><option>Woodstock</option><option>Central Team</option>
-          </select>
-        </div>
         <div>
           <label for="f-type">Type</label>
           <select id="f-type">
@@ -440,7 +457,55 @@
         render();
       });
     });
-    ["f-site", "f-type", "f-status", "f-search"].forEach((id) => $(id).addEventListener("input", render));
+    ["f-type", "f-status", "f-search"].forEach((id) => $(id).addEventListener("input", render));
+
+    // ---------- choosing a school ----------
+    // Each school's team can bookmark /admin?site=<code>. Otherwise the page
+    // remembers the last school chosen on this computer.
+
+    const SCHOOLS = [
+      ["Babington", "ba"], ["Heatherbrook", "hpa"], ["Lancaster", "la"],
+      ["South Wigston", "swhs"], ["Woodstock", "wpa"], ["Central Team", "ct"],
+    ];
+    const SITE_KEY = "lwlat-catering-site";
+    let site = startingSite();
+    $("board-title").textContent = site ? `${site} bookings` : "All bookings";
+
+    function startingSite() {
+      const code = new URLSearchParams(location.search).get("site");
+      const fromLink = SCHOOLS.find(([, c]) => c === code);
+      if (fromLink) return fromLink[0];
+      if (code === "all") return "";
+      try {
+        const saved = localStorage.getItem(SITE_KEY) || "";
+        return SCHOOLS.some(([name]) => name === saved) ? saved : "";
+      } catch { return ""; }
+    }
+
+    function chooseSite(name) {
+      site = name;
+      try { localStorage.setItem(SITE_KEY, name); } catch {}
+      const code = (SCHOOLS.find(([n]) => n === name) || [, "all"])[1];
+      const url = new URL(location.href);
+      url.searchParams.set("site", code);
+      history.replaceState(null, "", url);
+      render();
+    }
+
+    function renderSchools() {
+      const waiting = (name) => bookings.filter((b) => b.status === "New" && (!name || b.site === name)).length;
+      const button = (name, label) => {
+        const n = waiting(name);
+        return `<button type="button" class="school" data-site="${esc(name)}" aria-pressed="${site === name}">${esc(label)}` +
+          (n ? `<span class="count" aria-label="${n} new">${n}</span>` : "") + `</button>`;
+      };
+      $("school-buttons").innerHTML = button("", "All schools") + SCHOOLS.map(([name]) => button(name, name)).join("");
+      $("school-buttons").querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "center" });
+      const code = (SCHOOLS.find(([n]) => n === site) || [])[1];
+      $("add-booking").href = code ? `/?staff&site=${code}` : "/?staff";
+      $("school-buttons").querySelectorAll(".school").forEach((b) =>
+        b.addEventListener("click", () => { chooseSite(b.dataset.site); $("school-buttons").querySelector(`[data-site="${b.dataset.site}"]`).focus(); }));
+    }
 
     function today() {
       const d = new Date();
@@ -450,7 +515,7 @@
 
     function filtered() {
       const t = today();
-      const site = $("f-site").value, type = $("f-type").value, status = $("f-status").value;
+      const type = $("f-type").value, status = $("f-status").value;
       const q = $("f-search").value.trim().toLowerCase();
       let list = bookings.filter((b) => {
         if (view === "new" && b.status !== "New") return false;
@@ -471,17 +536,20 @@
     }
 
     function render() {
-      const newCount = bookings.filter((b) => b.status === "New").length;
+      renderSchools();
+      $("board-title").textContent = site ? `${site} bookings` : "All bookings";
+      document.title = `${site || "All"} bookings | LWLAT Catering`;
+      const newCount = bookings.filter((b) => b.status === "New" && (!site || b.site === site)).length;
       $("count-new").textContent = newCount ? String(newCount) : "";
 
       const list = filtered();
       $("result-count").textContent = `Showing ${list.length} booking${list.length === 1 ? "" : "s"}`;
       const tabName = document.querySelector('.tab[aria-pressed="true"]').firstChild.textContent;
-      $("print-title").textContent = `LWLAT catering bookings: ${tabName} (printed ${new Date().toLocaleDateString("en-GB")})`;
+      $("print-title").textContent = `LWLAT catering bookings: ${site || "all schools"}, ${tabName} (printed ${new Date().toLocaleDateString("en-GB")})`;
 
       if (!list.length) {
         const msg = {
-          new: "Nothing needs a reply. New requests will appear here.",
+          new: site ? `Nothing needs a reply for ${site}. New requests will appear here.` : "Nothing needs a reply. New requests will appear here.",
           upcoming: "No upcoming bookings match these filters.",
           past: "No past bookings match these filters.",
           all: bookings.length ? "No bookings match these filters." : "No bookings yet. Requests sent from the booking form will appear here.",
@@ -799,7 +867,8 @@
       const blob = new Blob(["﻿" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `catering-bookings-${today()}.csv`;
+      const code = (SCHOOLS.find(([n]) => n === site) || [, "all"])[1];
+      a.download = `catering-bookings-${code}-${today()}.csv`;
       a.click();
       URL.revokeObjectURL(a.href);
     });

@@ -126,6 +126,20 @@ The status buttons further down change the status without sending any email.
 
 ## How the admin page works
 
+**Choosing a school.** The buttons along the top of the admin page show one school's bookings at a time, or all of them. Each button shows how many new bookings that school has waiting. The page remembers the last school chosen on that computer. Each school also has its own link for its catering team to bookmark:
+
+| School | Link |
+| --- | --- |
+| Babington | `/admin?site=ba` |
+| Heatherbrook | `/admin?site=hpa` |
+| Lancaster | `/admin?site=la` |
+| South Wigston | `/admin?site=swhs` |
+| Woodstock | `/admin?site=wpa` |
+| Central Team | `/admin?site=ct` |
+| All schools | `/admin?site=all` |
+
+Put the site address in front, for example `https://lwlat-hospitality.netlify.app/admin?site=swhs`. The spreadsheet download, the printed list and **Add a booking** all follow the school you have chosen.
+
 - **Needs a reply** shows new requests. The number on the tab is how many are waiting.
 - **Upcoming** shows bookings from today onwards, grouped by day, leaving out declined and cancelled ones.
 - Select a booking to see everything about it, change its status, add private notes for the team, or email the person who booked.
