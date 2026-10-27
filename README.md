@@ -74,9 +74,15 @@ The alerts are sent through the trust's Microsoft 365 from one mailbox. Until th
 | `NOTIFY_LANCASTER` | Lancaster catering manager |
 | `NOTIFY_SOUTH_WIGSTON` | South Wigston catering manager |
 | `NOTIFY_WOODSTOCK` | Woodstock catering manager |
+| `NOTIFY_CENTRAL_TEAM` | Central Team bookings |
 | `NOTIFY_TRUST` | Copied on every booking, whichever site |
 
-To change who is told, edit these values in Netlify and redeploy. No code changes are needed.
+To change who is told, edit these values in Netlify and redeploy. No code changes are needed. When you add or edit a variable, make sure its scopes include **Functions**, then go to **Deploys** and choose **Trigger deploy**. Netlify only picks up new values on the next deploy.
+
+**Checking alerts are working.** On the admin page:
+
+- Open any booking. Under **Email alert** it says who the alert went to, or why it was not sent. Bookings added with **Add a booking** never send alerts.
+- Choose **Test email alerts**. It sends one test email to you only, not to the managers, and lists where each site's alerts will go. If something is wrong, it says what, for example a missing setting, a rejected secret or a mailbox the app cannot send from.
 
 **What IT needs to set up:** an app registration with the Microsoft Graph application permission `Mail.Send`, with admin consent and a client secret. It should be limited to the sending mailbox only, using RBAC for Applications in Exchange Online or an application access policy. The secret expires, usually after 12 or 24 months, and must be renewed in Netlify before then.
 
@@ -93,6 +99,30 @@ Keep each item inside quotation marks and followed by a comma. Old bookings keep
 ## Adding the trust logo
 
 Save the logo as `public/lwlat-logo.svg` (or a PNG, and change the file name to match). Then remove the word `hidden` from the `<img>` line near the top of `index.html` and `admin.html`.
+
+## Booking references
+
+Each booking gets a reference made of the site's code, the booking date as ddmmyy, and a number counting up from 001 for that site and date. For example, the first South Wigston booking for 27 October 2026 is `swhs271026001`, and the next one for that day is `swhs271026002`.
+
+| Site | Code |
+| --- | --- |
+| Babington | `ba` |
+| Heatherbrook | `hpa` |
+| Lancaster | `la` |
+| South Wigston | `swhs` |
+| Woodstock | `wpa` |
+| Central Team | `ct` |
+
+To change a code, edit `SITE_CODES` near the top of `netlify/functions/bookings.mjs`. Existing bookings keep their reference.
+
+## Replying to a booking
+
+Open a booking on the admin page. The box at the top has two buttons:
+
+- **Confirm order and email [name]** marks the booking Confirmed and emails the booker straight away with their order details. Replies come to the team member who confirmed it. The box then shows who it was sent to and when. If the email could not be sent, it says why and offers a link to email the booker yourself.
+- **Ask for more information** opens a ready-addressed email in Outlook (or whichever email app the computer uses), with the reference in the subject. Type your question and send it. The booking is marked **Info requested** so the team can see it is waiting on the booker.
+
+The status buttons further down change the status without sending any email.
 
 ## How the admin page works
 

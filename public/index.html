@@ -43,6 +43,8 @@
       transform: translateY(4px);
     }
     .step h2 { font-size: 1.45rem; font-weight: 800; }
+    .step-no svg { width: 18px; height: 18px; }
+    .step.done .step-no { background: var(--teal-deep); }
     .step-intro { margin: -10px 0 18px 48px; color: var(--muted); }
     .waiting { color: var(--muted); padding: 14px 16px; border: 2px dashed var(--line); border-radius: var(--radius-s); }
 
@@ -53,6 +55,7 @@
     .type-tiles strong { font-size: 1.15rem; }
     .type-tiles small { color: var(--muted); font-size: 0.95rem; }
 
+    .options.sites { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
     .row-2 .field { margin-top: 22px; }
 
@@ -74,10 +77,8 @@
     .lunch-total { margin-top: 10px; font-weight: 700; }
     .lunch-total.warn { color: var(--alert); }
 
-    .layout > .submit-row { grid-column: 1; }
-    .layout > .docket-wrap { grid-column: 2; grid-row: 1 / span 2; }
-    .submit-row { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
-    .submit-row p { color: var(--muted); max-width: 30rem; }
+    .submit-row { margin-top: 28px; display: grid; gap: 12px; }
+    .submit-row .btn { width: 100%; }
 
     /* ---------- the docket ---------- */
     .docket-wrap { position: sticky; top: 24px; }
@@ -119,9 +120,14 @@
     .docket dd.empty { font-weight: 400; color: var(--muted); }
     .docket ul { list-style: none; margin: 0; padding: 0; }
     .docket li { display: flex; justify-content: space-between; gap: 10px; }
+    .docket li span:first-child { min-width: 0; }
+    .docket li span:last-child { flex: none; white-space: nowrap; }
     .docket li + li { margin-top: 2px; }
     .docket .d-allergy { margin-top: 12px; }
-    .docket-note { margin-top: 26px; font-size: 0.9rem; color: var(--muted); }
+    .docket-note { font-size: 0.95rem; color: var(--muted); }
+    .docket-empty { padding: 14px 0 4px; color: var(--muted); }
+    @keyframes flash { from { background: var(--teal-wash); } to { background: transparent; } }
+    .docket .d-row.flash { animation: flash 1.2s ease-out; }
 
     /* ---------- confirmation ---------- */
     .done {
@@ -173,7 +179,7 @@
 
     @media (max-width: 920px) {
       .layout { grid-template-columns: 1fr; gap: 0; }
-      .layout > .docket-wrap { position: static; grid-column: 1; grid-row: auto; margin-top: 28px; }
+      .docket-wrap { position: static; margin-top: 28px; }
     }
     @media (max-width: 600px) {
       .layout { padding-top: 24px; }
@@ -248,7 +254,7 @@
 
           <!-- 1 -->
           <section class="step" aria-labelledby="h-need">
-            <div class="step-head"><span class="step-no" aria-hidden="true">1</span><h2 id="h-need">What do you need?</h2></div>
+            <div class="step-head"><span class="step-no" aria-hidden="true" data-n="1">1</span><h2 id="h-need">What do you need?</h2></div>
 
             <fieldset class="field" id="f-type">
               <legend>Type of booking</legend>
@@ -268,19 +274,20 @@
 
             <fieldset class="field" id="f-site">
               <legend>Which site is this for?</legend>
-              <div class="options inline">
+              <div class="options sites">
                 <label class="option"><input type="radio" name="site" value="Babington"> Babington</label>
                 <label class="option"><input type="radio" name="site" value="Heatherbrook"> Heatherbrook</label>
                 <label class="option"><input type="radio" name="site" value="Lancaster"> Lancaster</label>
                 <label class="option"><input type="radio" name="site" value="South Wigston"> South Wigston</label>
                 <label class="option"><input type="radio" name="site" value="Woodstock"> Woodstock</label>
+                <label class="option"><input type="radio" name="site" value="Central Team"> Central Team</label>
               </div>
             </fieldset>
           </section>
 
           <!-- 2 -->
           <section class="step" aria-labelledby="h-event">
-            <div class="step-head"><span class="step-no" aria-hidden="true">2</span><h2 id="h-event">The event</h2></div>
+            <div class="step-head"><span class="step-no" aria-hidden="true" data-n="2">2</span><h2 id="h-event">The event</h2></div>
 
             <div class="field" id="f-eventName">
               <label for="eventName">Event or meeting name</label>
@@ -305,7 +312,7 @@
 
           <!-- 3 -->
           <section class="step" aria-labelledby="h-order">
-            <div class="step-head"><span class="step-no" aria-hidden="true">3</span><h2 id="h-order">Your order</h2></div>
+            <div class="step-head"><span class="step-no" aria-hidden="true" data-n="3">3</span><h2 id="h-order">Your order</h2></div>
 
             <p class="waiting" id="order-waiting">Choose hospitality or packed lunches in step 1 to see the menu.</p>
 
@@ -371,7 +378,7 @@
 
           <!-- 4 -->
           <section class="step" aria-labelledby="h-diet">
-            <div class="step-head"><span class="step-no" aria-hidden="true">4</span><h2 id="h-diet">Dietary needs and allergies</h2></div>
+            <div class="step-head"><span class="step-no" aria-hidden="true" data-n="4">4</span><h2 id="h-diet">Dietary needs and allergies</h2></div>
 
             <fieldset class="field" id="f-dietary">
               <legend>Are there any dietary requirements or food allergies?</legend>
@@ -389,7 +396,7 @@
 
           <!-- 5 -->
           <section class="step" aria-labelledby="h-you">
-            <div class="step-head"><span class="step-no" aria-hidden="true">5</span><h2 id="h-you">Your details</h2></div>
+            <div class="step-head"><span class="step-no" aria-hidden="true" data-n="5">5</span><h2 id="h-you">Your details</h2></div>
 
             <div class="row-2">
               <div class="field" id="f-name">
@@ -427,17 +434,16 @@
         <div class="docket">
           <div class="docket-top">
             <h2 id="docket-title">Your order</h2>
-            <span id="docket-site">No site chosen</span>
+            <span id="docket-site"></span>
           </div>
+          <p class="docket-empty" id="docket-empty">Your order will build up here as you fill in the form.</p>
           <dl id="docket-body"></dl>
         </div>
-        <p class="docket-note">Check this summary before you send the form.</p>
+        <div class="submit-row">
+          <p class="docket-note" id="docket-note">Check your order, then send it to the Catering Team. They will email you to confirm.</p>
+          <button type="submit" form="booking" class="btn btn-large" id="submit-btn">Send booking request</button>
+        </div>
       </aside>
-
-      <div class="submit-row">
-        <button type="submit" form="booking" class="btn btn-large" id="submit-btn">Send booking request</button>
-        <p>The Catering Team will email you to confirm or to ask questions.</p>
-      </div>
     </div>
 
     <div id="done-view" hidden>
@@ -498,6 +504,19 @@
     ).join(""));
     const BESPOKE = "Bespoke, themed or other";
 
+    // Which answers belong to which numbered step.
+    const STEP_FIELDS = [
+      ["type", "site"],
+      ["eventName", "date", "time", "people"],
+      ["venue", "hospitalityItems", "hospitalityDetails", "lunches", "bespokeDetails", "fulfilment", "address", "receiverName", "receiverPhone"],
+      ["dietary", "dietaryDetails"],
+      ["name", "email", "phone", "department", "costCentre"],
+    ];
+    const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+    // The summary lines from the last update, to highlight the ones that change.
+    let lastDocket = {};
+
     // Catering Team mode (/?staff) for adding bookings by hand. Only people
     // with the Catering admin role can use it, and the server checks this too.
     const STAFF = new URLSearchParams(location.search).has("staff");
@@ -519,6 +538,7 @@
       $("done-public-2").hidden = true;
       $("again-btn").textContent = "Add another booking";
       $("submit-btn").textContent = "Add booking";
+      $("docket-note").textContent = "Check the order, then add it to the bookings list.";
       for (const id of STAFF_OPTIONAL) {
         $(id).closest(".field").querySelector("label").insertAdjacentHTML("beforeend", ' <span class="optional">(optional)</span>');
       }
@@ -609,6 +629,22 @@
       $("f-bespokeDetails").hidden = !(lunches()[BESPOKE] > 0);
       updateLunchTotal();
       renderDocket();
+      updateSteps();
+    }
+
+    function updateSteps() {
+      const bad = new Set(validate(collect()).map((e) => e.field));
+      document.querySelectorAll("#booking .step").forEach((step, i) => {
+        let done = STEP_FIELDS[i].every((f) => !bad.has(f));
+        if (i === 2) done = done && !!value("type");
+        if (step.classList.contains("done") === done) return;
+        step.classList.toggle("done", done);
+        const no = step.querySelector(".step-no");
+        no.innerHTML = done ? TICK : no.dataset.n;
+        const h = step.querySelector("h2");
+        h.querySelector(".visually-hidden")?.remove();
+        if (done) h.insertAdjacentHTML("beforeend", '<span class="visually-hidden"> (complete)</span>');
+      });
     }
 
     function updateLunchTotal() {
@@ -624,11 +660,19 @@
 
     function renderDocket() {
       const d = collect();
-      $("docket-site").textContent = d.site || "No site chosen";
+      $("docket-site").textContent = d.site || "";
+
+      const empty = !d.type && !d.site && !d.eventName && !d.date && !d.time && !d.people;
+      $("docket-empty").hidden = !empty;
+      if (empty) {
+        $("docket-body").innerHTML = "";
+        lastDocket = {};
+        return;
+      }
 
       const rows = [];
       const row = (label, html) => rows.push(
-        `<div class="d-row"><dt>${label}</dt>${html ? `<dd>${html}</dd>` : `<dd class="empty">Not given</dd>`}</div>`
+        `<div class="d-row" data-key="${label}"><dt>${label}</dt>${html ? `<dd>${html}</dd>` : `<dd class="empty">To fill in</dd>`}</div>`
       );
 
       row("Booking", d.type === "hospitality" ? "Hospitality" : d.type === "packed-lunch" ? "Packed lunches" : "");
@@ -652,6 +696,13 @@
       let html = rows.join("");
       if (d.dietary === "Yes") html += `<div class="d-allergy"><span class="allergy">Dietary needs or allergies</span></div>`;
       $("docket-body").innerHTML = html;
+
+      const now = {};
+      $("docket-body").querySelectorAll(".d-row").forEach((r) => {
+        now[r.dataset.key] = r.textContent;
+        if (r.dataset.key in lastDocket && lastDocket[r.dataset.key] !== now[r.dataset.key]) r.classList.add("flash");
+      });
+      lastDocket = now;
     }
 
     // ---------- reading the form ----------

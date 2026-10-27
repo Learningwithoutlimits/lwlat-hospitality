@@ -5,24 +5,38 @@
 //                                booking by hand, with looser rules.
 //   GET    /api/bookings        Catering Team, lists every booking
 //   PATCH  /api/bookings/:id    Catering Team, updates status and catering notes
+//   POST   /api/bookings/:id/confirm
+//                               Catering Team, confirms the order and emails the booker
 //   DELETE /api/bookings/:id    Catering Team, deletes a booking
+//
+// References are the site's code, the booking date as ddmmyy, and a number
+// counting up from 001 for that site and date, e.g. swhs271026001.
 //
 // Catering Team requests carry the person's Microsoft sign-in token as
 // "Authorization: Bearer <token>". The Catering Team are the people IT has
 // given the Catering.Admin app role in Entra. The booking form needs no sign-in.
 
 import { getStore } from "@netlify/blobs";
-import { randomBytes } from "node:crypto";
-import { notifyNewBooking } from "../lib/notify.mjs";
+import { notifyNewBooking, sendBookingConfirmation } from "../lib/notify.mjs";
 import { signedInUser } from "../lib/auth.mjs";
 
 export const config = {
-  path: ["/api/bookings", "/api/bookings/:id"],
+  path: ["/api/bookings", "/api/bookings/:id", "/api/bookings/:id/confirm"],
 };
 
-const SITES = ["Babington", "Heatherbrook", "Lancaster", "South Wigston", "Woodstock"];
+const SITES = ["Babington", "Heatherbrook", "Lancaster", "South Wigston", "Woodstock", "Central Team"];
 const TYPES = ["hospitality", "packed-lunch"];
-const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
+const STATUSES = ["New", "Info requested", "Confirmed", "Declined", "Cancelled", "Completed"];
+
+// Short codes for booking references. Change these if a school prefers another.
+const SITE_CODES = {
+  "Babington": "ba",
+  "Heatherbrook": "hpa",
+  "Lancaster": "la",
+  "South Wigston": "swhs",
+  "Woodstock": "wpa",
+  "Central Team": "ct",
+};
 const MAX_BODY_BYTES = 20000;
 const BESPOKE = "Bespoke, themed or other";
 
@@ -36,6 +50,7 @@ export default async (req, context) => {
     if (!user) return json({ error: "Please sign in with your LWLAT Microsoft account." }, 401);
     if (!user.isAdmin) return json({ error: "Your account does not have access to the Catering Team page." }, 403);
     if (req.method === "GET" && !id) return await listBookings();
+    if (req.method === "POST" && id && new URL(req.url).pathname.endsWith("/confirm")) return await confirmBooking(id, user);
     if (req.method === "PATCH" && id) return await updateBooking(id, req, user);
     if (req.method === "DELETE" && id) return await deleteBooking(id);
     return json({ error: "Not found." }, 404);
@@ -61,11 +76,10 @@ async function createBooking(req) {
   }
 
   // Honeypot field, hidden from people. Bots tend to fill it in.
-  if (body.website) return json({ ok: true, reference: "HB-000000-0000" }, 201);
+  if (body.website) return json({ ok: true, reference: "lwlat000000001" }, 201);
 
   const booking = validateBooking(body, staff);
   const now = new Date();
-  booking.id = makeReference(now);
   if (staff) {
     booking.status = body.status === undefined ? "Confirmed" : oneOf(body.status, STATUSES, "a status");
     booking.cateringNotes = text(body.cateringNotes, 2000);
@@ -78,16 +92,16 @@ async function createBooking(req) {
   booking.createdAt = now.toISOString();
   booking.updatedAt = booking.createdAt;
 
-  await store().setJSON(booking.id, booking);
+  await saveWithNewReference(booking);
 
   // Tell the site's catering manager. Bookings the team adds themselves need
-  // no alert, and a failed email must not lose the booking.
+  // no alert. The booking is already saved, so a failed email cannot lose it,
+  // and the outcome is kept on the booking for the admin page to show.
   if (!staff) {
-    try {
-      await notifyNewBooking(booking);
-    } catch (err) {
-      console.error("Booking alert failed", booking.id, err);
-    }
+    const alert = await notifyNewBooking(booking);
+    if (!alert.sent) console.error("Booking alert not sent", booking.id, alert.reason);
+    booking.alert = { ...alert, at: new Date().toISOString() };
+    await store().setJSON(booking.id, booking);
   }
 
   return json({ ok: true, reference: booking.id }, 201);
@@ -115,6 +129,24 @@ async function updateBooking(id, req, user) {
   }
   booking.updatedAt = new Date().toISOString();
   booking.updatedBy = user.name || user.email;
+
+  await s.setJSON(id, booking);
+  return json({ ok: true, booking });
+}
+
+// Marks the booking Confirmed and emails the booker. The status changes even
+// if the email cannot be sent, and the outcome is kept for the admin page.
+async function confirmBooking(id, user) {
+  const s = store();
+  const booking = await s.get(id, { type: "json" });
+  if (!booking) return json({ error: "Booking not found." }, 404);
+
+  booking.status = "Confirmed";
+  booking.updatedAt = new Date().toISOString();
+  booking.updatedBy = user.name || user.email;
+  const result = await sendBookingConfirmation(booking, user);
+  if (!result.sent) console.error("Confirmation email not sent", id, result.reason);
+  booking.confirmation = { ...result, at: booking.updatedAt, by: booking.updatedBy };
 
   await s.setJSON(id, booking);
   return json({ ok: true, booking });
@@ -239,10 +271,21 @@ async function readJson(req) {
   }
 }
 
-function makeReference(date) {
-  const ymd = date.toISOString().slice(0, 10).replace(/-/g, "");
-  const rand = randomBytes(3).toString("hex").toUpperCase();
-  return `HB-${ymd}-${rand}`;
+// Saves the booking under the next free reference for its site and date.
+// "onlyIfNew" stops two bookings made at the same moment taking one number.
+async function saveWithNewReference(booking) {
+  const s = store();
+  const [y, m, d] = booking.date.split("-");
+  const prefix = SITE_CODES[booking.site] + d + m + y.slice(2);
+  const { blobs } = await s.list({ prefix });
+  const used = blobs.map((b) => Number(b.key.slice(prefix.length))).filter(Number.isInteger);
+  let n = used.length ? Math.max(...used) + 1 : 1;
+  for (let tries = 0; tries < 25; tries++, n++) {
+    booking.id = prefix + String(n).padStart(3, "0");
+    const { modified } = await s.setJSON(booking.id, booking, { onlyIfNew: true });
+    if (modified) return;
+  }
+  throw new Error("Could not find a free booking reference for " + prefix);
 }
 
 function json(data, status = 200) {

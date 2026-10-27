@@ -34,7 +34,8 @@
     }
     .board-head h1 { font-size: clamp(1.7rem, 3.5vw, 2.2rem); font-weight: 800; }
     .board-head p { color: var(--muted); margin-top: 4px; }
-    .head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+    .head-actions .btn:first-child { order: 1; margin-left: 6px; }
 
     .tabs {
       display: flex; flex-wrap: wrap; gap: 4px;
@@ -53,8 +54,8 @@
       border-radius: var(--radius-s) var(--radius-s) 0 0;
     }
     .tab:hover { color: var(--ink); background: var(--teal-wash); }
-    .tab[aria-selected="true"] { color: var(--ink); }
-    .tab[aria-selected="true"]::after {
+    .tab[aria-pressed="true"] { color: var(--ink); }
+    .tab[aria-pressed="true"]::after {
       content: ""; position: absolute; left: 8px; right: 8px; bottom: -2px;
       height: 4px; border-radius: 2px; background: var(--teal);
     }
@@ -106,9 +107,27 @@
     .ticket .t-title { font-weight: 700; font-size: 1.075rem; }
     .ticket .t-sub { color: var(--muted); font-size: 0.95rem; }
     .ticket .t-items { margin-top: 4px; font-size: 0.95rem; }
+    .ticket .t-ref { display: block; margin-top: 4px; color: var(--muted); font-size: 0.875rem; }
     .ticket .t-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
     .ticket .t-people { font-weight: 700; white-space: nowrap; }
 
+    .alert-test {
+      margin-top: 24px;
+      padding: 20px 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--teal);
+      border-radius: var(--radius-m);
+    }
+    .alert-test-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .alert-test h2 { font-size: 1.25rem; font-weight: 800; }
+    .alert-test p { margin-top: 10px; }
+    .alert-test table { width: 100%; margin-top: 14px; border-collapse: collapse; }
+    .alert-test th, .alert-test td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+    .alert-test th { color: var(--muted); font-weight: 700; font-size: 0.9rem; }
+    .ok-text { color: var(--ok); font-weight: 700; }
+    .no-text { color: var(--no); font-weight: 700; }
+    .result-count { margin-top: 16px; color: var(--muted); font-size: 0.95rem; }
     .empty-state {
       margin-top: 32px;
       padding: 32px;
@@ -179,6 +198,27 @@
     .status-btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
     .dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 24px; }
     .dlg-actions > div { display: flex; flex-wrap: wrap; gap: 10px; }
+    .next-step {
+      margin-top: 16px;
+      padding: 4px 18px 18px;
+      border: 2px solid var(--teal);
+      border-radius: var(--radius-m);
+      background: var(--teal-wash);
+    }
+    .next-step h3 { color: var(--ink); }
+    .next-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .next-help { margin-top: 12px; font-size: 0.95rem; color: var(--muted); }
+    .confirm-line:not(:empty) { margin-top: 12px; }
+    .confirm-delete {
+      margin-top: 18px;
+      padding: 16px;
+      border: 2px solid var(--no);
+      border-radius: var(--radius-s);
+      background: var(--no-bg);
+    }
+    .confirm-delete > div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .btn-delete { background: var(--no); border-color: var(--no); }
+    .btn-delete:hover { background: #6e1414; border-color: #6e1414; }
     .saved-msg { color: var(--ok); font-weight: 700; align-self: center; }
 
     .print-title { display: none; }
@@ -195,7 +235,7 @@
 
     @media print {
       body { background: #fff; font-size: 11pt; }
-      .band, .board-head, .tabs, .filters, .site-footer, dialog { display: none !important; }
+      .band, .board-head, .tabs, .filters, .site-footer, dialog, .alert-test, .result-count { display: none !important; }
       .print-title { display: block; font-size: 16pt; font-weight: 800; margin-bottom: 8pt; }
       .wrap { max-width: none; padding: 0; }
       .day { margin-top: 14pt; break-inside: avoid-page; }
@@ -238,17 +278,26 @@
         </div>
         <div class="head-actions">
           <a class="btn" href="/?staff">Add a booking</a>
-          <button type="button" class="btn btn-quiet" id="refresh-btn">Refresh</button>
-          <button type="button" class="btn btn-quiet" id="csv-btn">Download spreadsheet</button>
-          <button type="button" class="btn btn-quiet" id="print-btn">Print list</button>
+          <button type="button" class="btn btn-text" id="refresh-btn">Refresh</button>
+          <button type="button" class="btn btn-text" id="csv-btn">Download spreadsheet</button>
+          <button type="button" class="btn btn-text" id="print-btn">Print list</button>
+          <button type="button" class="btn btn-text" id="alert-test-btn">Test email alerts</button>
         </div>
       </div>
 
-      <div class="tabs" role="tablist" aria-label="Which bookings to show">
-        <button class="tab" role="tab" data-view="new" aria-selected="true">Needs a reply<span class="count" id="count-new"></span></button>
-        <button class="tab" role="tab" data-view="upcoming" aria-selected="false">Upcoming</button>
-        <button class="tab" role="tab" data-view="past" aria-selected="false">Past</button>
-        <button class="tab" role="tab" data-view="all" aria-selected="false">All</button>
+      <section class="alert-test" id="alert-test" aria-labelledby="alert-test-title" tabindex="-1" hidden>
+        <div class="alert-test-head">
+          <h2 id="alert-test-title">Email alerts</h2>
+          <button type="button" class="btn btn-text" id="alert-test-close">Close</button>
+        </div>
+        <div id="alert-test-body"></div>
+      </section>
+
+      <div class="tabs" role="group" aria-label="Which bookings to show">
+        <button type="button" class="tab" data-view="new" aria-pressed="true">Needs a reply<span class="count" id="count-new"></span></button>
+        <button type="button" class="tab" data-view="upcoming" aria-pressed="false">Upcoming</button>
+        <button type="button" class="tab" data-view="past" aria-pressed="false">Past</button>
+        <button type="button" class="tab" data-view="all" aria-pressed="false">All</button>
       </div>
 
       <div class="filters">
@@ -257,7 +306,7 @@
           <select id="f-site">
             <option value="">All sites</option>
             <option>Babington</option><option>Heatherbrook</option><option>Lancaster</option>
-            <option>South Wigston</option><option>Woodstock</option>
+            <option>South Wigston</option><option>Woodstock</option><option>Central Team</option>
           </select>
         </div>
         <div>
@@ -272,7 +321,7 @@
           <label for="f-status">Status</label>
           <select id="f-status">
             <option value="">Any status</option>
-            <option>New</option><option>Confirmed</option><option>Declined</option>
+            <option>New</option><option>Info requested</option><option>Confirmed</option><option>Declined</option>
             <option>Cancelled</option><option>Completed</option>
           </select>
         </div>
@@ -284,6 +333,7 @@
 
       <p class="print-title" id="print-title"></p>
       <div class="notice notice-error load-error" id="load-error" hidden></div>
+      <p class="result-count" id="result-count" role="status"></p>
       <div id="rail"></div>
     </section>
   </main>
@@ -306,13 +356,15 @@
   <script src="/vendor/msal-browser-4.30.0.min.js"></script>
   <script src="/auth.js"></script>
   <script>
-    const STATUSES = ["New", "Confirmed", "Declined", "Cancelled", "Completed"];
+    const STATUSES = ["New", "Info requested", "Confirmed", "Declined", "Cancelled", "Completed"];
+    const slug = (status) => String(status).replace(/\s+/g, "-");
     const BESPOKE = "Bespoke, themed or other";
     const $ = (id) => document.getElementById(id);
 
     let bookings = [];
     let view = "new";
     let openId = null;
+    let me = null;
 
     // ---------- sign in ----------
 
@@ -384,7 +436,7 @@
     document.querySelectorAll(".tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         view = tab.dataset.view;
-        document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+        document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-pressed", String(t === tab)));
         render();
       });
     });
@@ -423,7 +475,8 @@
       $("count-new").textContent = newCount ? String(newCount) : "";
 
       const list = filtered();
-      const tabName = document.querySelector('.tab[aria-selected="true"]').firstChild.textContent;
+      $("result-count").textContent = `Showing ${list.length} booking${list.length === 1 ? "" : "s"}`;
+      const tabName = document.querySelector('.tab[aria-pressed="true"]').firstChild.textContent;
       $("print-title").textContent = `LWLAT catering bookings: ${tabName} (printed ${new Date().toLocaleDateString("en-GB")})`;
 
       if (!list.length) {
@@ -465,9 +518,10 @@
           <span class="t-title">${esc(b.eventName)}</span>
           <span class="t-sub">${esc(b.site)}${b.type === "hospitality" ? `, ${esc(b.venue)}` : `, ${esc(b.fulfilment)}`}. Booked by ${esc(b.name)} (${esc(b.department)})</span>
           <span class="t-items" style="display:block">${esc(itemsSummary(b))}</span>
+          <span class="t-ref">Ref ${esc(b.id)}</span>
         </span>
         <span class="t-side">
-          <span class="pill pill-${esc(b.status)}">${esc(b.status)}</span>
+          <span class="pill pill-${slug(b.status)}">${esc(b.status)}</span>
           <span class="t-people">${esc(b.people)} people</span>
           ${b.dietary === "Yes" ? `<span class="allergy">Dietary needs</span>` : ""}
         </span>
@@ -509,13 +563,31 @@
       }
 
       const subject = encodeURIComponent(`Your catering booking ${b.id}: ${b.eventName}`);
+      const first = esc(String(b.name || "").trim().split(/\s+/)[0]);
+      const confirmedOk = b.confirmation && b.confirmation.sent;
       $("d-body").innerHTML = `
         ${b.dietary === "Yes" ? `<div class="allergy-box" role="note"><strong>Dietary needs or allergies</strong><p>${esc(b.dietaryDetails)}</p></div>` : ""}
 
+        <div class="next-step">
+          <h3>Reply to ${esc(b.name)}</h3>
+          <div class="next-buttons">
+            <button type="button" class="btn" id="d-confirm-order">${confirmedOk ? "Send confirmation again" : b.email ? `Confirm order and email ${first}` : "Confirm order"}</button>
+            ${b.email ? `<a class="btn btn-quiet" id="d-info" href="${infoMailto(b)}">Ask for more information</a>` : ""}
+          </div>
+          <p class="next-help">${b.email
+            ? `<strong>Confirm order</strong> emails ${first} straight away with their order details. <strong>Ask for more information</strong> opens a ready-addressed email in Outlook for you to finish.`
+            : "There is no email address for this booking, so contact the booker by phone."}</p>
+          <p class="confirm-line" id="d-next-msg" role="status">${confirmationLine(b)}</p>
+        </div>
+
         <h3>Status</h3>
+        <p class="hint">Changing the status here does not send an email.</p>
         <div class="status-row" role="group" aria-label="Booking status">
           ${STATUSES.map((s) => `<button type="button" class="status-btn" data-status="${s}" aria-pressed="${b.status === s}">${s}</button>`).join("")}
         </div>
+
+        <h3>Email alert</h3>
+        <p class="alert-line">${alertLine(b)}</p>
 
         <h3>Booking</h3>
         <dl class="facts">
@@ -532,7 +604,7 @@
         <dl class="facts">
           ${fact("Name", esc(b.name))}
           ${fact("Department", esc(b.department))}
-          ${fact("Email", `<a href="mailto:${esc(b.email)}?subject=${subject}">${esc(b.email)}</a>`)}
+          ${fact("Email", b.email ? `<a href="mailto:${esc(b.email)}?subject=${subject}">${esc(b.email)}</a>` : "")}
           ${fact("Telephone", telLink(b.phone))}
           ${fact("Cost centre", esc(b.costCentre))}
         </dl>
@@ -550,12 +622,33 @@
             ${b.email ? `<a class="btn btn-quiet" href="mailto:${esc(b.email)}?subject=${subject}">Email ${esc(b.name.split(" ")[0])}</a>` : ""}
             <button type="button" class="btn btn-danger" id="d-delete">Delete booking</button>
           </div>
+        </div>
+        <div class="confirm-delete" id="d-confirm" role="alertdialog" aria-labelledby="d-confirm-text" hidden>
+          <p id="d-confirm-text"><strong>Delete this booking?</strong> It will be removed for the whole Catering Team and cannot be undone.</p>
+          <div>
+            <button type="button" class="btn btn-delete" id="d-delete-yes">Delete booking</button>
+            <button type="button" class="btn btn-quiet" id="d-delete-no">Keep booking</button>
+          </div>
+          <p class="err" id="d-delete-err" hidden></p>
         </div>`;
 
       $("d-body").querySelectorAll(".status-btn").forEach((btn) =>
         btn.addEventListener("click", () => save({ status: btn.dataset.status }, `Marked as ${btn.dataset.status}`)));
       $("d-save").addEventListener("click", () => save({ cateringNotes: $("d-notes").value }, "Notes saved"));
-      $("d-delete").addEventListener("click", remove);
+      $("d-confirm-order").addEventListener("click", confirmOrder);
+      // The link opens Outlook. Mark the booking so the team can see it is waiting on the booker.
+      $("d-info")?.addEventListener("click", () => {
+        if (b.status === "New") save({ status: "Info requested" }, "Marked as Info requested");
+      });
+      $("d-delete").addEventListener("click", () => {
+        $("d-confirm").hidden = false;
+        $("d-delete-no").focus();
+      });
+      $("d-delete-no").addEventListener("click", () => {
+        $("d-confirm").hidden = true;
+        $("d-delete").focus();
+      });
+      $("d-delete-yes").addEventListener("click", remove);
 
       if (!$("detail").open) $("detail").showModal();
     }
@@ -577,15 +670,16 @@
     }
 
     async function remove() {
-      const b = bookings.find((x) => x.id === openId);
-      if (!confirm(`Delete the booking "${b.eventName}" (${b.id})? This cannot be undone.`)) return;
       try {
         await api(`/api/bookings/${encodeURIComponent(openId)}`, { method: "DELETE" });
         bookings = bookings.filter((x) => x.id !== openId);
         $("detail").close();
         render();
       } catch (err) {
-        if (err.message !== "signed-out") alert("The booking was not deleted. " + err.message);
+        if (err.message !== "signed-out") {
+          $("d-delete-err").textContent = "The booking was not deleted. " + err.message;
+          $("d-delete-err").hidden = false;
+        }
       }
     }
 
@@ -595,6 +689,92 @@
     // ---------- export and print ----------
 
     $("print-btn").addEventListener("click", () => window.print());
+
+    // ---------- replying to the booker ----------
+
+    function infoMailto(b) {
+      const first = String(b.name || "").trim().split(/\s+/)[0];
+      const signOff = me && me.name ? `${me.name}\nCatering Team` : "Catering Team";
+      const body = `Hello ${first},\n\nThank you for your catering booking for ${b.eventName} on ${longDate(b.date)} (reference ${b.id}).\n\nBefore we can confirm it, please could you let us know:\n\n\n\nKind regards,\n${signOff}`;
+      return `mailto:${encodeURIComponent(b.email)}?subject=${encodeURIComponent(`Your catering booking ${b.id}: ${b.eventName}`)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function confirmMailto(b) {
+      const first = String(b.name || "").trim().split(/\s+/)[0];
+      const body = `Hello ${first},\n\nYour catering booking for ${b.eventName} on ${longDate(b.date)} (reference ${b.id}) is confirmed.\n\nKind regards,\n${me && me.name ? me.name + "\n" : ""}Catering Team`;
+      return `mailto:${encodeURIComponent(b.email)}?subject=${encodeURIComponent(`Booking confirmed: ${b.eventName} (${b.id})`)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function confirmationLine(b) {
+      const c = b.confirmation;
+      if (!c) return "";
+      const when = new Date(c.at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+      return c.sent
+        ? `<span class="ok-text">Confirmation emailed</span> to ${esc(c.to.join(", "))} on ${esc(when)} by ${esc(c.by)}.`
+        : `<span class="no-text">Confirmed, but the email was not sent.</span> ${esc(c.reason)}${b.email ? ` <a href="${confirmMailto(b)}">Email ${esc(b.name)} yourself</a>.` : ""}`;
+    }
+
+    async function confirmOrder() {
+      const btn = $("d-confirm-order");
+      btn.disabled = true;
+      btn.textContent = "Confirming...";
+      try {
+        const data = await api(`/api/bookings/${encodeURIComponent(openId)}/confirm`, { method: "POST" });
+        const i = bookings.findIndex((x) => x.id === openId);
+        const notes = $("d-notes").value;
+        bookings[i] = data.booking;
+        render();
+        openDetail(openId);
+        $("d-notes").value = notes;
+        $("d-confirm-order").focus();
+      } catch (err) {
+        if (err.message !== "signed-out") {
+          btn.disabled = false;
+          btn.textContent = "Confirm order";
+          $("d-next-msg").innerHTML = `<span class="no-text">Not confirmed.</span> ${esc(err.message)}`;
+        }
+      }
+    }
+
+    // ---------- email alerts ----------
+
+    function alertLine(b) {
+      if (b.addedByStaff) return "None. Bookings added by the Catering Team do not send alerts.";
+      if (!b.alert) return "No record. This booking was made before alerts were tracked.";
+      const when = new Date(b.alert.at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+      return b.alert.sent
+        ? `<span class="ok-text">Sent</span> to ${esc(b.alert.to.join(", "))} on ${esc(when)}`
+        : `<span class="no-text">Not sent.</span> ${esc(b.alert.reason)}`;
+    }
+
+    $("alert-test-close").addEventListener("click", () => { $("alert-test").hidden = true; $("alert-test-btn").focus(); });
+    $("alert-test-btn").addEventListener("click", async () => {
+      const btn = $("alert-test-btn");
+      btn.disabled = true;
+      btn.textContent = "Testing...";
+      try {
+        const r = await api("/api/alert-test", { method: "POST" });
+        const rows = r.routing.map((x) => `<tr><td>${esc(x.site)}</td><td>${x.to.length
+          ? esc(x.to.join(", "))
+          : `<span class="no-text">No address set.</span> Add ${esc(x.key)} or NOTIFY_TRUST in Netlify.`}</td></tr>`).join("");
+        $("alert-test-body").innerHTML = `
+          <p>${r.test.sent
+            ? `<span class="ok-text">Test email sent</span> to ${esc(r.test.to.join(", "))} from ${esc(r.from)}. Check your inbox, and your junk folder if it is not there within a few minutes.`
+            : `<span class="no-text">Test email not sent.</span> ${esc(r.test.reason)}`}</p>
+          <p>The test goes to you only. Real alerts go to these addresses:</p>
+          <table><thead><tr><th scope="col">Site</th><th scope="col">Alerts go to</th></tr></thead><tbody>${rows}</tbody></table>`;
+        $("alert-test").hidden = false;
+        $("alert-test").focus();
+      } catch (err) {
+        if (err.message !== "signed-out") {
+          $("alert-test-body").innerHTML = `<p><span class="no-text">The test could not run.</span> ${esc(err.message)}</p>`;
+          $("alert-test").hidden = false;
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Test email alerts";
+      }
+    });
 
     $("csv-btn").addEventListener("click", () => {
       const cols = [
@@ -646,6 +826,7 @@
     // ---------- start ----------
 
     Auth.start().then(async (user) => {
+      me = user;
       if (!user) return showSignIn();
       if (!user.isAdmin) return noAccess();
       $("loading-view").hidden = true;

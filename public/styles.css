@@ -45,9 +45,11 @@ p { margin: 0; }
 a { color: var(--teal-deep); }
 [hidden] { display: none !important; }
 
+/* Yellow inner ring with a dark outer ring: visible on white and on teal. */
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 3px solid var(--ink);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus);
 }
 
 .wrap {
@@ -93,10 +95,11 @@ a { color: var(--teal-deep); }
   font-size: 1.25rem;
   line-height: 1.1;
 }
+/* Both lines stay at "large text" size (bold, 19px or more) so white on
+   trust teal meets WCAG AA. */
 .wordmark-text span {
   display: block;
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-weight: 700;
 }
 .band-title {
   font-weight: 700;
@@ -130,15 +133,26 @@ a { color: var(--teal-deep); }
   color: var(--teal-deep);
 }
 .btn-quiet:hover { background: var(--teal-wash); border-color: var(--teal-deep); }
+/* Solid white so the label passes contrast on the teal band. */
 .btn-on-band {
   white-space: nowrap;
-  background: transparent;
+  background: #fff;
   border-color: #fff;
-  color: #fff;
-  min-height: 40px;
-  padding: 6px 14px;
+  color: var(--teal-deep);
+  min-height: 44px;
+  padding: 8px 16px;
 }
-.btn-on-band:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
+.btn-on-band:hover { background: var(--teal-wash); border-color: var(--teal-wash); }
+.btn-text {
+  background: none;
+  border-color: transparent;
+  color: var(--teal-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.btn-text:hover { background: var(--teal-wash); border-color: transparent; }
 .btn-danger { background: var(--paper); color: var(--no); border-color: var(--no); }
 .btn-danger:hover { background: var(--no-bg); border-color: var(--no); }
 .btn-large { min-height: 52px; padding: 12px 28px; font-size: 1.1rem; }
@@ -222,7 +236,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   border-color: var(--teal-deep);
   background: var(--teal-wash);
 }
-.option:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+.option:has(input:focus-visible) { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus); }
 
 /* ---------- small shared pieces ---------- */
 
@@ -235,6 +249,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   white-space: nowrap;
 }
 .pill-New { background: var(--teal-wash); color: var(--teal-deep); box-shadow: inset 0 0 0 1.5px var(--teal-deep); }
+.pill-Info-requested { background: var(--alert-bg); color: var(--alert); box-shadow: inset 0 0 0 1.5px var(--alert-line); }
 .pill-Confirmed { background: var(--ok-bg); color: var(--ok); }
 .pill-Declined { background: var(--no-bg); color: var(--no); }
 .pill-Cancelled { background: var(--grey-bg); color: var(--grey); }
@@ -281,9 +296,8 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 
 @media (max-width: 560px) {
   .band-actions .band-title { display: none; }
-  .band-title { font-size: 1rem; }
-  .wordmark-text { font-size: 1.05rem; }
-  .wordmark-text span { font-size: 0.85rem; }
+  .wordmark-text { font-size: 1.2rem; }
+  .btn-on-band { padding: 8px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
